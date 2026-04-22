@@ -1,7 +1,7 @@
 # fiscmd
 a simple console made by me (and ofc chatgpt 😭😭)
 
-this is the official github page of a simple goofy console named **fiscmd** :D
+this is the official github page of a simple goofy console named **fiscmd** :D\n
 can do file interaction, goofy miscs like rng, basic stuff like calculator, and more random things fr fr
 
 its fun go try it :D
