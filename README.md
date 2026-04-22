@@ -38,5 +38,6 @@ why .net 6.0 lts and not .net 8.0 lts
 
 more updates in the future bye
 
-for update announcement + logs, pls join my discord server so that u'll be notified bout "new update when"
+> for update announcement + logs, pls join my discord server so that u'll be notified bout "new update when"
+
 https://discord.gg/wzCjFwc2PR
