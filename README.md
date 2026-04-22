@@ -8,17 +8,17 @@ its fun go try it :D
 
 # FAQ
 whats fiscmd
-><>$ a small simple console made by me (and ofc chatgpt 🙏🥀) with goofy miscs and dangerous file interaction console that u can use :D
+**a small simple console made by me (and ofc chatgpt 🙏🥀) with goofy miscs and dangerous file interaction console that u can use :D**
 what version is it currently
-><>$ fiscmd v0.99.85 beta ><> (totally not even final and stable release but oke)
-bcuz its in beta, u may expect some bugs, although they're rare ;-;*
+**fiscmd v0.99.85 beta ><> (totally not even final and stable release but oke)**
+*bcuz its in beta, u may expect some bugs, although they're rare ;-;**
 requirement??
-><>$ .net 6.0 desktop runtime long term support (install if a warning screams bout it when u open the console)
+**.net 6.0 desktop runtime long term support (install if a warning screams bout it when u open the console)**
 would it always updates
-><>$ ofc it will tf u expecting me to leave it abandoned or smth???
+**ofc it will tf u expecting me to leave it abandoned or smth???**
 where had u programmed ts
-><>$ Microsoft Visual Studio Insiders 2026
+**Microsoft Visual Studio Insiders 2026**
 why .net 6.0 lts and not .net 8.0 lts
-><>$ fiscmd too simple for win10 and later 😭😭
+**fiscmd too simple for win10 and later 😭😭**
 
 more updates in the future bye
