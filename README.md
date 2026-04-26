@@ -35,6 +35,8 @@ why .net 6.0 lts and not .net 8.0 lts
 
 **fiscmd too simple for win10 and later 😭😭**
 
+what programming language did u use for ts
+**C#**
 
 more updates in the future bye
 
