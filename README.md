@@ -15,7 +15,7 @@ whats fiscmd
 
 what version is it currently
 
-**fiscmd v0.99.99.95 beta ><> (totally not even final and stable release but oke)**
+**fiscmd v1 final ><>**
 
 *bcuz its in beta, u may expect some bugs, although they're rare ;-;**
 
