@@ -44,3 +44,11 @@ more updates in the future bye
 > for update announcement + logs, pls join my discord server so that u'll be notified bout "new update when"
 
 https://discord.gg/wzCjFwc2PR
+
+also the README.txt (the txt and **NOT** md) file that ur seeing above me??
+
+thats the instructions guide to help u how 2 make the msvc project :D
+
+for u to actually edit the script n stuff + debug ur own fiscmd clone :D
+
+(jst dont copy me)
