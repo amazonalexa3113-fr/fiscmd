@@ -5,7 +5,7 @@
     <TargetFramework>net6.0</TargetFramework>
 
     <!-- app icon -->
-    <ApplicationIcon>fiscmdico.ico</ApplicationIcon>
+    <ApplicationIcon>fis.ico</ApplicationIcon>
 
     <!-- important part for compiling the app -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
