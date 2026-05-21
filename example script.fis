@@ -1,0 +1,31 @@
+var a = 5
+var b = 11
+
+print a and b in the first place: {a}, {b}
+
+echo checking if a = 5...
+
+if (a == 5)
+{
+	echo yes
+	echo now checking if b was 10...
+
+	if (b == 10)
+	{
+		echo also yes
+		print increasing a from {a} to 6...
+		a++
+	}
+	else
+	{
+		echo no
+		echo exited
+	}
+}
+else
+{
+	echo no
+	echo exited
+}
+
+print a and b now: {a}, {b}
