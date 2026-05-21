@@ -1,4 +1,4 @@
-﻿/*
+/*
 
 ><>$ echo HAVE A HAVE A LOOK ONE POUND FIS
 
@@ -6,7 +6,7 @@ tysm for using my open source fiscmd console app :D
 
 for context, ts screams for .net 6.0 long term support, which requires windows 7 or newer
 cuz well... obviously this console app was too uh simple :skull:
-and also... cross platform :D (works well + tested on windows + wsl linux)
+and also... cross platform :D (works well + tested on windows + real linux)
 
 u can edit/add anything here and give it a name as long as ur not copying me :skull:
 especially editing the PrintPrompt() function, cuz thats where the ><>$ thing comes from
@@ -15,7 +15,7 @@ made entirely using the default csharp language
 
 bye :D
 
-more than 3 thousand worth of lines :sob::pray: (honorable mention: all made by chatgpt and a 13 yo teenager named swindow)
+more than 5 thousand worth of lines :sob::pray: (honorable mention: all made by chatgpt and a 13 yo teenager named swindow)
 
 GOOD NEWS:
 i had replaced every
@@ -57,6 +57,7 @@ namespace fis
         // importable commands
         static bool importedFissnake = false;
         static bool importedFisscript = false;
+        static bool importedFisdraw = false;
 		// if u wanna add more importable commands, just add this:
 		// static bool importedCommand = false;
 		// note that it MUST be false here and true later
@@ -106,10 +107,11 @@ namespace fis
         {
             Console.CursorVisible = false;
 
-            Console.Title = "have a have look one pound fis";
+            Console.Title = "fiscmd ><>";
 
             Console.ForegroundColor = ConsoleColor.Cyan;
-            TypeWrite("><> fiscmd initialized, welcome :D", 25, false);
+            PrintFisCoolAsf(true, 25, false);
+            TypeWrite(" fiscmd initialized, welcome :D", 25, false);
             Console.WriteLine();
 
             // ResForegroundColor();
@@ -385,6 +387,15 @@ namespace fis
 
                     case "sudo": Console.WriteLine("nice try :skull:"); break; // sudo joke
 
+                    case "initializefis":
+                    case "initfis":
+                        PrintFisCoolAsf(true, 25, false);
+                        TypeWrite(" fiscmd initialized, welcome :D", 25, false);
+                        ResForegroundColor();
+                        Console.WriteLine();
+                        break;
+
+
                     // importable command
                     case "importcmd":
                     case "import":
@@ -407,6 +418,15 @@ namespace fis
                         if (ye3) break;
 
                         FisScript(parts);
+                        break;
+
+                    case "fisdraw":
+                    case "draw":
+                    case "fispaint": // joke name grabbed from "mspaint"
+                        bool ye4 = WarnNotImported(importedFisdraw);
+                        if (ye4) break;
+
+                        FisDraw();
                         break;
 
                     // unimportable command that used to be importable back then
@@ -460,6 +480,17 @@ namespace fis
             return result.ToArray();
         }
 
+        // also helper void for Fisscript() (for the print command)
+        static string ParseVars(string text, Dictionary<string, string> vars)
+        {
+            foreach (var v in vars)
+            {
+                text = text.Replace($"{{{v.Key}}}", v.Value);
+            }
+
+            return text;
+        }
+
         // useless typewriting function only used in ShowUpdate() command :sob::pray:
         static void TypeWrite(string input, int delay=10, bool newline=true)
         {
@@ -471,6 +502,37 @@ namespace fis
             if (newline)
             {
                 Console.WriteLine();
+            }
+        }
+
+        // "useless" print the fish ascii
+        static void PrintFisCoolAsf(bool type, int delay = 10, bool newline = true)
+        {
+            if (type)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkBlue;
+                Console.Write(">");
+                Thread.Sleep(delay);
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.Write("<");
+                Thread.Sleep(delay);
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.Write(">");
+                Thread.Sleep(delay);
+
+                if (newline)
+                {
+                    Console.WriteLine();
+                }
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.Write(">");
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.Write("<");
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.Write(">");
             }
         }
 
@@ -990,7 +1052,7 @@ namespace fis
             Console.WriteLine("(spoiler alert: may only checks the real os, wsl linux would still");
             Console.WriteLine("be counted as windows)");
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("view logs (NEW COMMAND) - log / update (theres still more in tab autocorrect)");
+            Console.WriteLine("view logs - log / update (theres still more in tab autocorrect)");
             Console.WriteLine("exit app - exit (or press ctrl + c)");
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine("(alternatively u can press ctrl + c to exit");
@@ -1020,6 +1082,7 @@ namespace fis
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("show current directory (><[current dir]>$ ) - toggleShowDir (or lowercase: toggleshowdir)");
             Console.WriteLine("flip coin - coin / morecoins / flipcoin / flipacoin / headsntails / (more in tab autocorrect)");
+            Console.WriteLine("show the \"fiscmd initialized...\" message earlier - initializefis / initfis");
             Console.WriteLine();
             Console.WriteLine("NEW COMMAND - import / importcmd\nit is said that bro can actually import SPECIAL commands :0");
             Console.ForegroundColor = ConsoleColor.Cyan;
@@ -1051,7 +1114,7 @@ namespace fis
                 Console.Write("enter first number: ");
                 double a = double.Parse(Console.ReadLine());
 
-                Console.Write("operator (+ - * /): ");
+                Console.Write("operator (+ - * / ^): ");
                 string op = Console.ReadLine();
 
                 Console.Write("enter second number: ");
@@ -1061,10 +1124,14 @@ namespace fis
 
                 switch (op)
                 {
+                    // basic math
                     case "+": result = a + b; break;
                     case "-": result = a - b; break;
                     case "*": result = a * b; break;
                     case "/": result = b != 0 ? a / b : throw new DivideByZeroException(); break;
+                    // advanced math
+                    case "^":
+                    case "**": result = Math.Pow(a, b); break;
                     default:
                         Console.ForegroundColor = ConsoleColor.Red;
                         Console.WriteLine("invalid operator");
@@ -2339,7 +2406,7 @@ namespace fis
         static void ShowVersion()
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("fiscmd v1.4 beta ><>");
+            Console.WriteLine("fiscmd v1.5 beta ><>");
             /*
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine("(LETS GO FINAL V2 WE COOKED)");
@@ -2350,7 +2417,7 @@ namespace fis
             Console.WriteLine(".NET 6.0 LTS");
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.DarkYellow;
-            Console.WriteLine("BEST POSSIBLE BETA VER ME AND CHATGPT HAD EVER MADE");
+            Console.WriteLine("just simply walk around the damn wall :skull::wilted-flower:");
             ResForegroundColor();
         }
 
@@ -2667,15 +2734,22 @@ namespace fis
         static void ShowUpdate()
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            TypeWrite("v1.4 beta logs (press any key for each next log ok):\n");
+            TypeWrite("v1.5 beta logs (press any key for each next log ok):\n");
             Console.ReadKey(true);
-            TypeWrite("- NEW IMPORTABLE COMMAND: fisscript (enter the \"import\" or command for more)");
+            TypeWrite("- updated the importable command \"fisscript\" (see \"fisscript /guide\" for help)");
             Console.ReadKey(true);
-            TypeWrite("- .fis FILE EXTENSION OUT NOW LESSGOOO");
+            TypeWrite("- NEW IMPORTABLE COMMAND: fisdraw (see \"import\" for more)");
             Console.ReadKey(true);
-            TypeWrite("- EVERY FILE INTERACTION COMMANDS HAS NOW FINALLY SUPPORTS SPACES IN FILENAMES LESSGOOOO");
-            Console.ForegroundColor = ConsoleColor.DarkYellow;
-            TypeWrite("(no more \"invalid file\" for every files with spaces in its name ;)");
+            TypeWrite("- NEW COMMAND: \"initfis\"");
+            Console.ReadKey(true);
+            TypeWrite("- no one asked, but i updated the fis logo to be like this: ", 10, false);
+            PrintFisCoolAsf(true, 10); // ><>
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.ReadKey(true);
+            TypeWrite("- updated the \"calc\" command to be supporting the infamous ^ symbol");
+            Console.ReadKey(true);
+            TypeWrite("- updated the icon + title :D");
+            Console.ReadKey(true);
             TypeWrite("- thats it lmao");
             Console.ReadKey(true);
             Console.ForegroundColor = ConsoleColor.Blue;
@@ -3044,6 +3118,8 @@ namespace fis
                 Console.WriteLine("\nalso here are list of commands that needs to be imported in order to use:");
                 Console.WriteLine("- a snake game i made - fissnake / snake");
                 Console.WriteLine("- create a .fis file fiscmd script - fisscript / scriptfile / script / scr");
+                Console.WriteLine("- draw - fisdraw / fispaint / draw");
+                Console.WriteLine("- unicode en/decoder - fisuni / fisunicode / unicode");
                 ResForegroundColor();
                 return;
             }
@@ -3066,8 +3142,14 @@ namespace fis
                 Display = "fisscript / scriptfile / script / scr",
                 Imported = importedFisscript,
                 ImportAction = new Action(() => importedFisscript = true)
+            },
+            new
+            {
+                Names = new[] { "fisdraw","draw","fispaint" },
+                Display = "fisdraw / fispaint / draw",
+                Imported = importedFisdraw,
+                ImportAction = new Action(() => importedFisdraw = true)
             }
-
             // now add any importable commands like this
             /*
             new
@@ -3538,12 +3620,23 @@ namespace fis
             // remove command name itself
             string[] actualArgs = args.Skip(1).ToArray();
 
+            // /guide mode (no file execution)
+            if (actualArgs.Length >= 1 && actualArgs[0].StartsWith("/guide"))
+            {
+                string guideArg = actualArgs.Length >= 2 ? actualArgs[1].ToLower() : "";
+
+                ShowGuideFisscript(guideArg);
+                return;
+            }
+
             // no args after command
             if (actualArgs.Length < 1)
             {
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("usage: script [file.fis]");
+                Console.WriteLine("usage: script [file.fis] (/guide)");
                 Console.WriteLine("[file.fis] - any files with the .fis file extension");
+                Console.WriteLine("(/guide [command]) - optional switch for actually guiding YOU on how to use ts");
+                Console.WriteLine("(/guide [command]) - and also [command] is optional, u type the command, it will guide u the same command");
 
                 Console.ForegroundColor = ConsoleColor.DarkCyan;
                 Console.WriteLine("\nhow to comment: #");
@@ -3598,14 +3691,23 @@ namespace fis
             // random object
             Random rnd = new Random();
 
+            // runtime storage
+            Dictionary<string, string> vars = new Dictionary<string, string>();
+            Dictionary<string, List<string>> functions = new Dictionary<string, List<string>>();
+
+            // else statement (last if result)
+            bool lastIfResult = false;
+
             // script start message
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine($"running script: {Path.GetFileName(fullPath)}\n\nlogs:");
             ResForegroundColor();
 
             // line runner
-            foreach (string raw in lines)
+            for (int i = 0; i < lines.Length; i++)
             {
+                string raw = lines[i];
+
                 string line = raw.Trim();
 
                 // skip empty
@@ -3619,14 +3721,661 @@ namespace fis
                 // split command
                 string[] cmd = ParseQuotedArgs(line);
 
+                // no command
+                if (cmd.Length < 1)
+                    continue;
+
                 // command name
                 string command = cmd[0].ToLower();
 
+                // variables
+                if (command == "var")
+                {
+                    // example:
+                    // var a = 5
+                    // var b = "hello"
+
+                    string content = line.Substring(4).Trim();
+
+                    int eqIndex = content.IndexOf('=');
+
+                    if (eqIndex != -1)
+                    {
+                        string varName = content.Substring(0, eqIndex).Trim();
+                        string value = content.Substring(eqIndex + 1).Trim();
+
+                        // remove quotes
+                        if (value.StartsWith("\"") && value.EndsWith("\""))
+                            value = value.Substring(1, value.Length - 2);
+
+                        // add/update variable
+                        if (vars.ContainsKey(varName))
+                            vars[varName] = value;
+                        else
+                            vars.Add(varName, value);
+                    }
+                }
+
+                // if statements
+                else if (command == "if")
+                {
+                    bool result = false;
+
+                    int start = line.IndexOf('(');
+                    int end = line.LastIndexOf(')');
+
+                    if (start != -1 && end != -1)
+                    {
+                        string condition = line.Substring(start + 1, end - start - 1);
+
+                        // ==
+                        if (condition.Contains("=="))
+                        {
+                            string[] parts = condition.Split("==");
+
+                            string left = parts[0].Trim();
+                            string right = parts[1].Trim();
+
+                            // variable lookup
+                            if (vars.ContainsKey(left))
+                                left = vars[left];
+
+                            if (vars.ContainsKey(right))
+                                right = vars[right];
+
+                            right = right.Trim('"');
+
+                            result = left == right;
+                            lastIfResult = result;
+                        }
+
+                        // !=
+                        else if (condition.Contains("!="))
+                        {
+                            string[] parts = condition.Split("!=");
+
+                            string left = parts[0].Trim();
+                            string right = parts[1].Trim();
+
+                            // variable lookup
+                            if (vars.ContainsKey(left))
+                                left = vars[left];
+
+                            if (vars.ContainsKey(right))
+                                right = vars[right];
+
+                            right = right.Trim('"');
+
+                            result = left != right;
+                            lastIfResult = result;
+                        }
+                    }
+
+                    // true
+                    if (result)
+                    {
+                        i++;
+
+                        int braceLevel = 1;
+
+                        while (i < lines.Length)
+                        {
+                            string inner = lines[i].Trim();
+
+                            if (inner == "{")
+                            {
+                                braceLevel++;
+                                i++;
+                                continue;
+                            }
+
+                            if (inner == "}")
+                            {
+                                braceLevel--;
+
+                                if (braceLevel == 0)
+                                    break;
+
+                                i++;
+                                continue;
+                            }
+
+                            // execute commands here
+
+                            string[] innerCmd = ParseQuotedArgs(inner);
+
+                            if (innerCmd.Length < 1)
+                            {
+                                i++;
+                                continue;
+                            }
+
+                            string innerCommand = innerCmd[0].ToLower();
+
+                            // nested if
+                            if (innerCommand == "if")
+                            {
+                                bool innerResult = false;
+
+                                int start2 = inner.IndexOf('(');
+                                int end2 = inner.LastIndexOf(')');
+
+                                if (start2 != -1 && end2 != -1)
+                                {
+                                    string condition = inner.Substring(start2 + 1, end2 - start2 - 1);
+
+                                    // ==
+                                    if (condition.Contains("=="))
+                                    {
+                                        string[] parts = condition.Split(new string[] { "==" }, StringSplitOptions.None);
+
+                                        string left = parts[0].Trim();
+                                        string right = parts[1].Trim();
+
+                                        if (vars.ContainsKey(left))
+                                            left = vars[left];
+
+                                        if (vars.ContainsKey(right))
+                                            right = vars[right];
+
+                                        right = right.Trim('"');
+
+                                        innerResult = left == right;
+                                    }
+
+                                    // !=
+                                    else if (condition.Contains("!="))
+                                    {
+                                        string[] parts = condition.Split(new string[] { "!=" }, StringSplitOptions.None);
+
+                                        string left = parts[0].Trim();
+                                        string right = parts[1].Trim();
+
+                                        if (vars.ContainsKey(left))
+                                            left = vars[left];
+
+                                        if (vars.ContainsKey(right))
+                                            right = vars[right];
+
+                                        right = right.Trim('"');
+
+                                        innerResult = left != right;
+                                    }
+                                }
+
+                                // skip nested block if false
+                                if (!innerResult)
+                                {
+                                    int nestedBrace = 0;
+
+                                    while (i < lines.Length)
+                                    {
+                                        string skipLine = lines[i].Trim();
+
+                                        if (skipLine == "{")
+                                            nestedBrace++;
+
+                                        if (skipLine == "}")
+                                        {
+                                            nestedBrace--;
+
+                                            if (nestedBrace <= 0)
+                                                break;
+                                        }
+
+                                        i++;
+                                    }
+                                }
+                            }
+
+                            // variable reassignment
+                            else if (inner.Contains("=") && !inner.StartsWith("if"))
+                            {
+                                int eqIndex2 = inner.IndexOf('=');
+
+                                if (eqIndex2 != -1)
+                                {
+                                    string varName = inner.Substring(0, eqIndex2).Trim();
+                                    string value = inner.Substring(eqIndex2 + 1).Trim();
+
+                                    if (vars.ContainsKey(value))
+                                        value = vars[value];
+
+                                    // remove quotes
+                                    if (value.StartsWith("\"") && value.EndsWith("\""))
+                                        value = value.Substring(1, value.Length - 2);
+
+                                    if (vars.ContainsKey(varName))
+                                    {
+                                        vars[varName] = value;
+                                    }
+                                }
+                            }
+
+                            // ++
+                            else if (inner.EndsWith("++"))
+                            {
+                                string varName = inner.Replace("++", "").Trim();
+
+                                if (vars.ContainsKey(varName))
+                                {
+                                    int num;
+
+                                    if (int.TryParse(vars[varName], out num))
+                                    {
+                                        num++;
+
+                                        vars[varName] = num.ToString();
+                                    }
+                                }
+                            }
+
+                            // print
+                            else if (innerCommand == "print")
+                            {
+                                if (inner.Length > 6)
+                                {
+                                    string output = inner.Substring(6);
+
+                                    output = ParseVars(output, vars);
+
+                                    Console.WriteLine(output);
+                                }
+                            }
+
+                            // echo
+                            else if (innerCommand == "echo")
+                            {
+                                if (inner.Length > 5)
+                                {
+                                    Console.WriteLine(inner.Substring(5));
+                                }
+                            }
+
+                            // type
+                            else if (innerCommand == "type")
+                            {
+                                if (inner.Length > 5)
+                                {
+                                    string text = inner.Substring(5);
+
+                                    foreach (char c in text)
+                                    {
+                                        Console.Write(c);
+                                        Thread.Sleep(25);
+                                    }
+
+                                    Console.WriteLine();
+                                }
+                            }
+
+                            // wait
+                            else if (innerCommand == "wait" || innerCommand == "sleep")
+                            {
+                                if (innerCmd.Length >= 2)
+                                {
+                                    int ms;
+
+                                    if (int.TryParse(innerCmd[1], out ms))
+                                        Thread.Sleep(ms);
+                                }
+                            }
+
+                            // clear
+                            else if (innerCommand == "clear" || innerCommand == "cls")
+                            {
+                                Console.Clear();
+                            }
+
+                            // beep
+                            else if (innerCommand == "beep")
+                            {
+                                Console.Beep();
+                            }
+
+                            // pause
+                            else if (innerCommand == "pause")
+                            {
+                                Console.ForegroundColor = ConsoleColor.DarkGray;
+                                Console.Write("press any key to continue . . . ");
+
+                                ResForegroundColor();
+
+                                Console.ReadKey(true);
+                                Console.WriteLine();
+                            }
+
+                            i++;
+                        }
+                    }
+
+                    // false
+                    else
+                    {
+                        while (i < lines.Length)
+                        {
+                            if (lines[i].Trim() == "}")
+                                break;
+
+                            i++;
+                        }
+                    }
+                }
+
+                // else statements
+                else if (command == "else")
+                {
+                    // skip else if previous if was true
+                    if (lastIfResult)
+                    {
+                        while (i < lines.Length)
+                        {
+                            if (lines[i].Trim() == "}")
+                                break;
+
+                            i++;
+                        }
+                    }
+
+                    // run else block
+                    else
+                    {
+                        i++;
+
+                        int braceLevel = 1;
+
+                        while (i < lines.Length)
+                        {
+                            string inner = lines[i].Trim();
+
+                            if (inner == "{")
+                            {
+                                braceLevel++;
+                                i++;
+                                continue;
+                            }
+
+                            if (inner == "}")
+                            {
+                                braceLevel--;
+
+                                if (braceLevel == 0)
+                                    break;
+
+                                i++;
+                                continue;
+                            }
+
+                            // execute commands here
+
+                            string[] innerCmd = ParseQuotedArgs(inner);
+
+                            if (innerCmd.Length < 1)
+                            {
+                                i++;
+                                continue;
+                            }
+
+                            string innerCommand = innerCmd[0].ToLower();
+
+                            // nested if
+                            if (innerCommand == "if")
+                            {
+                                bool innerResult = false;
+
+                                int start2 = inner.IndexOf('(');
+                                int end2 = inner.LastIndexOf(')');
+
+                                if (start2 != -1 && end2 != -1)
+                                {
+                                    string condition = inner.Substring(start2 + 1, end2 - start2 - 1);
+
+                                    // ==
+                                    if (condition.Contains("=="))
+                                    {
+                                        string[] parts = condition.Split(new string[] { "==" }, StringSplitOptions.None);
+
+                                        string left = parts[0].Trim();
+                                        string right = parts[1].Trim();
+
+                                        if (vars.ContainsKey(left))
+                                            left = vars[left];
+
+                                        if (vars.ContainsKey(right))
+                                            right = vars[right];
+
+                                        right = right.Trim('"');
+
+                                        innerResult = left == right;
+                                    }
+
+                                    // !=
+                                    else if (condition.Contains("!="))
+                                    {
+                                        string[] parts = condition.Split(new string[] { "!=" }, StringSplitOptions.None);
+
+                                        string left = parts[0].Trim();
+                                        string right = parts[1].Trim();
+
+                                        if (vars.ContainsKey(left))
+                                            left = vars[left];
+
+                                        if (vars.ContainsKey(right))
+                                            right = vars[right];
+
+                                        right = right.Trim('"');
+
+                                        innerResult = left != right;
+                                    }
+                                }
+
+                                // skip nested block if false
+                                if (!innerResult)
+                                {
+                                    int nestedBrace = 0;
+
+                                    while (i < lines.Length)
+                                    {
+                                        string skipLine = lines[i].Trim();
+
+                                        if (skipLine == "{")
+                                            nestedBrace++;
+
+                                        if (skipLine == "}")
+                                        {
+                                            nestedBrace--;
+
+                                            if (nestedBrace <= 0)
+                                                break;
+                                        }
+
+                                        i++;
+                                    }
+                                }
+                            }
+
+                            // variable reassignment
+                            else if (inner.Contains("=") && !inner.StartsWith("if"))
+                            {
+                                int eqIndex2 = inner.IndexOf('=');
+
+                                if (eqIndex2 != -1)
+                                {
+                                    string varName = inner.Substring(0, eqIndex2).Trim();
+                                    string value = inner.Substring(eqIndex2 + 1).Trim();
+
+                                    if (vars.ContainsKey(value))
+                                        value = vars[value];
+
+                                    // remove quotes
+                                    if (value.StartsWith("\"") && value.EndsWith("\""))
+                                        value = value.Substring(1, value.Length - 2);
+
+                                    if (vars.ContainsKey(varName))
+                                    {
+                                        vars[varName] = value;
+                                    }
+                                }
+                            }
+
+                            // ++
+                            else if (inner.EndsWith("++"))
+                            {
+                                string varName = inner.Replace("++", "").Trim();
+
+                                if (vars.ContainsKey(varName))
+                                {
+                                    int num;
+
+                                    if (int.TryParse(vars[varName], out num))
+                                    {
+                                        num++;
+
+                                        vars[varName] = num.ToString();
+                                    }
+                                }
+                            }
+
+                            // print
+                            else if (innerCommand == "print")
+                            {
+                                if (inner.Length > 6)
+                                {
+                                    string output = inner.Substring(6);
+
+                                    output = ParseVars(output, vars);
+
+                                    Console.WriteLine(output);
+                                }
+                            }
+
+                            // echo
+                            else if (innerCommand == "echo")
+                            {
+                                if (inner.Length > 5)
+                                {
+                                    Console.WriteLine(inner.Substring(5));
+                                }
+                            }
+
+                            // type
+                            else if (innerCommand == "type")
+                            {
+                                if (inner.Length > 5)
+                                {
+                                    string text = inner.Substring(5);
+
+                                    foreach (char c in text)
+                                    {
+                                        Console.Write(c);
+                                        Thread.Sleep(25);
+                                    }
+
+                                    Console.WriteLine();
+                                }
+                            }
+
+                            // wait
+                            else if (innerCommand == "wait" || innerCommand == "sleep")
+                            {
+                                if (innerCmd.Length >= 2)
+                                {
+                                    int ms;
+
+                                    if (int.TryParse(innerCmd[1], out ms))
+                                        Thread.Sleep(ms);
+                                }
+                            }
+
+                            // clear
+                            else if (innerCommand == "clear" || innerCommand == "cls")
+                            {
+                                Console.Clear();
+                            }
+
+                            // beep
+                            else if (innerCommand == "beep")
+                            {
+                                Console.Beep();
+                            }
+
+                            // pause
+                            else if (innerCommand == "pause")
+                            {
+                                Console.ForegroundColor = ConsoleColor.DarkGray;
+                                Console.Write("press any key to continue . . . ");
+
+                                ResForegroundColor();
+
+                                Console.ReadKey(true);
+                                Console.WriteLine();
+                            }
+
+                            i++;
+                        }
+                    }
+                }
+
+                // ++
+                else if (line.EndsWith("++"))
+                {
+                    string varName = line.Replace("++", "").Trim();
+
+                    if (vars.ContainsKey(varName))
+                    {
+                        int num;
+
+                        if (int.TryParse(vars[varName], out num))
+                        {
+                            num++;
+
+                            vars[varName] = num.ToString();
+                        }
+                    }
+                }
+
+                // variable reassignment
+                else if (line.Contains("=") && !line.StartsWith("if"))
+                {
+                    int eqIndex = line.IndexOf('=');
+
+                    if (eqIndex != -1)
+                    {
+                        string varName = line.Substring(0, eqIndex).Trim();
+                        string value = line.Substring(eqIndex + 1).Trim();
+
+                        // remove quotes
+                        if (value.StartsWith("\"") && value.EndsWith("\""))
+                            value = value.Substring(1, value.Length - 2);
+
+                        // update variable
+                        if (vars.ContainsKey(varName))
+                        {
+                            vars[varName] = value;
+                        }
+                    }
+                }
+
                 // print
-                if (command == "print")
+                else if (command == "print")
                 {
                     if (line.Length > 6)
-                        Console.WriteLine(line.Substring(6));
+                    {
+                        string output = line.Substring(6);
+
+                        output = ParseVars(output, vars);
+
+                        Console.WriteLine(output);
+                    }
+                }
+
+                // echo
+                else if (command == "echo")
+                {
+                    if (line.Length > 5)
+                    {
+                        Console.WriteLine(line.Substring(5));
+                    }
                 }
 
                 // typewriter
@@ -3647,7 +4396,7 @@ namespace fis
                 }
 
                 // wait
-                else if (command == "wait")
+                else if (command == "wait" || command == "sleep")
                 {
                     if (cmd.Length >= 2)
                     {
@@ -3683,6 +4432,371 @@ namespace fis
                             int.TryParse(cmd[2], out max))
                         {
                             Console.WriteLine(rnd.Next(min, max + 1));
+                        }
+                    }
+                }
+
+                // functions
+                else if (command == "func")
+                {
+                    // example:
+                    // func hello
+
+                    if (cmd.Length >= 2)
+                    {
+                        string funcName = cmd[1];
+
+                        List<string> funcLines = new List<string>();
+
+                        i++;
+
+                        int braceLevel = 0;
+
+                        while (i < lines.Length)
+                        {
+                            string funcLine = lines[i].Trim();
+
+                            // opening brace
+                            if (funcLine == "{")
+                            {
+                                braceLevel++;
+
+                                funcLines.Add(funcLine);
+
+                                i++;
+                                continue;
+                            }
+
+                            // closing brace
+                            if (funcLine == "}")
+                            {
+                                braceLevel--;
+
+                                // ONLY add nested braces
+                                if (braceLevel > 0)
+                                    funcLines.Add(funcLine);
+
+                                // end function completely
+                                if (braceLevel <= 0)
+                                    break;
+
+                                i++;
+                                continue;
+                            }
+
+                            funcLines.Add(funcLine);
+
+                            i++;
+                        }
+
+                        // add/update function
+                        if (functions.ContainsKey(funcName))
+                            functions[funcName] = funcLines;
+                        else
+                            functions.Add(funcName, funcLines);
+                    }
+                }
+
+                // call function
+                else if (command == "call")
+                {
+                    // example:
+                    // call hello
+
+                    if (cmd.Length >= 2)
+                    {
+                        string funcName = cmd[1];
+
+                        // exists?
+                        if (functions.ContainsKey(funcName))
+                        {
+                            List<string> funcLines = functions[funcName];
+
+                            for (int fi = 0; fi < funcLines.Count; fi++)
+                            {
+                                string funcLine = funcLines[fi].Trim();
+
+                                // skip empty
+                                if (funcLine == "")
+                                    continue;
+
+                                // comments
+                                if (funcLine.StartsWith("#"))
+                                    continue;
+
+                                // parse command
+                                string[] funcCmd = ParseQuotedArgs(funcLine);
+
+                                if (funcCmd.Length < 1)
+                                    continue;
+
+                                string funcCommand = funcCmd[0].ToLower();
+
+                                // skip braces
+                                if (funcLine == "{" || funcLine == "}")
+                                    continue;
+
+                                // if inside function
+                                if (funcCommand == "if")
+                                {
+                                    bool result = false;
+
+                                    int start = funcLine.IndexOf('(');
+                                    int end = funcLine.LastIndexOf(')');
+
+                                    if (start != -1 && end != -1)
+                                    {
+                                        string condition = funcLine.Substring(start + 1, end - start - 1);
+
+                                        // ==
+                                        if (condition.Contains("=="))
+                                        {
+                                            string[] parts = condition.Split(new string[] { "==" }, StringSplitOptions.None);
+
+                                            string left = parts[0].Trim();
+                                            string right = parts[1].Trim();
+
+                                            if (vars.ContainsKey(left))
+                                                left = vars[left];
+
+                                            if (vars.ContainsKey(right))
+                                                right = vars[right];
+
+                                            right = right.Trim('"');
+
+                                            result = left == right;
+                                            lastIfResult = result;
+                                        }
+
+                                        // !=
+                                        else if (condition.Contains("!="))
+                                        {
+                                            string[] parts = condition.Split(new string[] { "!=" }, StringSplitOptions.None);
+
+                                            string left = parts[0].Trim();
+                                            string right = parts[1].Trim();
+
+                                            if (vars.ContainsKey(left))
+                                                left = vars[left];
+
+                                            if (vars.ContainsKey(right))
+                                                right = vars[right];
+
+                                            right = right.Trim('"');
+
+                                            result = left != right;
+                                            lastIfResult = result;
+                                        }
+                                    }
+
+                                    // if false, skip block
+                                    if (!result)
+                                    {
+                                        while (fi < funcLines.Count)
+                                        {
+                                            if (funcLines[fi].Trim() == "}")
+                                                break;
+
+                                            fi++;
+                                        }
+                                    }
+
+                                    continue;
+                                }
+
+                                // ++
+                                else if (funcLine.EndsWith("++"))
+                                {
+                                    string varName = funcLine.Replace("++", "").Trim();
+
+                                    if (vars.ContainsKey(varName))
+                                    {
+                                        int num;
+
+                                        if (int.TryParse(vars[varName], out num))
+                                        {
+                                            num++;
+
+                                            vars[varName] = num.ToString();
+                                        }
+                                    }
+                                }
+
+                                // +=
+                                else if (funcLine.Contains("+="))
+                                {
+                                    string[] parts = funcLine.Split(new string[] { "+=" }, StringSplitOptions.None);
+
+                                    if (parts.Length >= 2)
+                                    {
+                                        string varName = parts[0].Trim();
+                                        string addValue = parts[1].Trim();
+
+                                        if (vars.ContainsKey(addValue))
+                                            addValue = vars[addValue];
+
+                                        if (vars.ContainsKey(varName))
+                                        {
+                                            int left;
+                                            int right;
+
+                                            if (int.TryParse(vars[varName], out left) &&
+                                                int.TryParse(addValue, out right))
+                                            {
+                                                vars[varName] = (left + right).ToString();
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // a = a+1
+                                else if (funcLine.Contains("=") && funcLine.Contains("+"))
+                                {
+                                    int eqIndex = funcLine.IndexOf('=');
+
+                                    string varName = funcLine.Substring(0, eqIndex).Trim();
+                                    string expression = funcLine.Substring(eqIndex + 1).Trim();
+
+                                    string[] math = expression.Split('+');
+
+                                    if (math.Length >= 2)
+                                    {
+                                        string leftSide = math[0].Trim();
+                                        string rightSide = math[1].Trim();
+
+                                        if (vars.ContainsKey(leftSide))
+                                            leftSide = vars[leftSide];
+
+                                        if (vars.ContainsKey(rightSide))
+                                            rightSide = vars[rightSide];
+
+                                        int left;
+                                        int right;
+
+                                        if (int.TryParse(leftSide, out left) &&
+                                            int.TryParse(rightSide, out right))
+                                        {
+                                            vars[varName] = (left + right).ToString();
+                                        }
+                                    }
+                                }
+
+                                // variable reassignment
+                                else if (funcLine.Contains("=") && !funcLine.StartsWith("if"))
+                                {
+                                    int eqIndex = funcLine.IndexOf('=');
+
+                                    if (eqIndex != -1)
+                                    {
+                                        string varName = funcLine.Substring(0, eqIndex).Trim();
+                                        string value = funcLine.Substring(eqIndex + 1).Trim();
+
+                                        if (vars.ContainsKey(value))
+                                            value = vars[value];
+
+                                        // remove quotes
+                                        if (value.StartsWith("\"") && value.EndsWith("\""))
+                                            value = value.Substring(1, value.Length - 2);
+
+                                        // update variable
+                                        if (vars.ContainsKey(varName))
+                                        {
+                                            vars[varName] = value;
+                                        }
+                                    }
+                                }
+
+                                // print
+                                else if (funcCommand == "print")
+                                {
+                                    if (funcLine.Length > 6)
+                                    {
+                                        string output = funcLine.Substring(6);
+
+                                        output = ParseVars(output, vars);
+
+                                        Console.WriteLine(output);
+                                    }
+                                }
+
+                                // echo
+                                else if (funcCommand == "echo")
+                                {
+                                    if (funcLine.Length > 5)
+                                    {
+                                        Console.WriteLine(funcLine.Substring(5));
+                                    }
+                                }
+
+                                // type
+                                else if (funcCommand == "type")
+                                {
+                                    if (funcLine.Length > 5)
+                                    {
+                                        string text = funcLine.Substring(5);
+
+                                        foreach (char c in text)
+                                        {
+                                            Console.Write(c);
+                                            Thread.Sleep(25);
+                                        }
+
+                                        Console.WriteLine();
+                                    }
+                                }
+
+                                // wait
+                                else if (funcCommand == "wait" || funcCommand == "sleep")
+                                {
+                                    if (funcCmd.Length >= 2)
+                                    {
+                                        int ms;
+
+                                        if (int.TryParse(funcCmd[1], out ms))
+                                            Thread.Sleep(ms);
+                                    }
+                                }
+
+                                // clear
+                                else if (funcCommand == "clear" || funcCommand == "cls")
+                                {
+                                    Console.Clear();
+                                }
+
+                                // beep
+                                else if (funcCommand == "beep")
+                                {
+                                    Console.Beep();
+                                }
+
+                                // pause
+                                else if (funcCommand == "pause")
+                                {
+                                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                                    Console.Write("press any key to continue . . . ");
+
+                                    ResForegroundColor();
+
+                                    Console.ReadKey(true);
+                                    Console.WriteLine();
+                                }
+
+                                // unknown
+                                else
+                                {
+                                    Console.ForegroundColor = ConsoleColor.DarkRed;
+                                    Console.WriteLine($"unknown command in function: {funcCmd[0]}");
+                                    ResForegroundColor();
+                                }
+                            }
+                        }
+
+                        // not found
+                        else
+                        {
+                            Console.ForegroundColor = ConsoleColor.DarkRed;
+                            Console.WriteLine($"function not found: {funcName}");
+                            ResForegroundColor();
                         }
                     }
                 }
@@ -3783,6 +4897,7 @@ namespace fis
                     Console.WriteLine();
                 }
 
+                // pause without prompt
                 else if (command == "paunul")
                 {
                     Console.ReadKey(true);
@@ -3801,6 +4916,329 @@ namespace fis
             Console.WriteLine("script finished :D");
 
             ResForegroundColor();
+        }
+
+        // show guide for the Fisscript() void
+        static void ShowGuideFisscript(string arg)
+        {
+            void prnt(string what, bool newline=true)
+            {
+                if (newline)
+                {
+                    Console.WriteLine(what);
+                } else
+                {
+                    Console.Write(what);
+                }
+            }
+
+            void setcol(ConsoleColor col)
+            {
+                Console.ForegroundColor = col;
+            }
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+
+            if (arg == "" || arg == null)
+            {
+                setcol(ConsoleColor.Cyan);
+                prnt("list of commands:");
+                setcol(ConsoleColor.DarkCyan);
+                prnt("\nSIMPLE COMMANDS:");
+                setcol(ConsoleColor.Yellow);
+                prnt("- echo: echo anything after it, simple");
+                prnt("- print: same as echo except it prints the variable whenever there are brackets {} that surrounds it");
+                prnt("- type: same as echo except it types anything after it, also simple");
+                prnt("- pause: \"press any key to continue\"");
+                prnt("- paunul: same as pause except it doesnt show the prompt");
+                prnt("- color: set a color, thats it");
+                prnt("- wait / sleep: waits for how many milleseconds");
+                setcol(ConsoleColor.Red);
+                prnt("\nADVANCED COMMANDS:");
+                setcol(ConsoleColor.Yellow);
+                prnt("- if - then statement: if { }");
+                prnt(@"example of that:
+if (a == 5) {
+    a = 6
+}");
+                prnt("unfortunately no \"else\" :c");
+                prnt("\n- var: create a variable\nexample of that: var a = 5");
+                prnt("\n- func: make a new function");
+                prnt(@"example of that:
+var a = 5
+func hi {
+    print {a}
+}");
+                prnt("and call that later with \"call\"");
+                prnt(@"
+call hi
+                
+(echoes out ""5""");
+                setcol(ConsoleColor.DarkYellow);
+                prnt("\nGOOFY COMMANDS:");
+                setcol(ConsoleColor.Yellow);
+                prnt("- beep: just... beeps :skull:");
+                prnt("- random: random a number ranged from 1 - 100");
+                prnt("\nbasically thats all");
+                prnt("# to comment (ex: # this is a comment)");
+            }
+            else if (arg == "vars" || arg == "var")
+            {
+                setcol(ConsoleColor.Yellow);
+                prnt("var: create a variable\nexample of that: var a = 5");
+            }
+            else if (arg == "print")
+            {
+                setcol(ConsoleColor.Yellow);
+                prnt("- print: same as echo except it prints the variable whenever there are brackets {} that surrounds it");
+            }
+            else if (arg == "echo")
+            {
+                setcol(ConsoleColor.Yellow);
+                prnt("- echo: echo anything after it, simple");
+            }
+            else if (arg == "type")
+            {
+                setcol(ConsoleColor.Yellow);
+                prnt("- type: same as echo except it types anything after it, also simple");
+            }
+            else if (arg == "if")
+            {
+                setcol(ConsoleColor.Yellow);
+                prnt("- if - then statement: if { }");
+                prnt(@"example of that:
+if (a == 5) {
+    a = 6
+}");
+                prnt("unfortunately no \"else\" :c");
+            }
+            else if (arg == "func" || arg == "call")
+            {
+                setcol(ConsoleColor.Yellow);
+                prnt("\n- func: make a new function");
+                prnt(@"example of that:
+var a = 5
+func hi {
+    print {a}
+}");
+                prnt("and call that later with \"call\"");
+                prnt(@"
+                call hi
+                
+                (echoes out ""5""");
+            }
+            else if (arg == "pause")
+            {
+                setcol(ConsoleColor.Yellow);
+                prnt("- pause: \"press any key to continue\"");
+            }
+            else if (arg == "paunul")
+            {
+                setcol(ConsoleColor.Yellow);
+                prnt("- paunul: same as pause except it doesnt show the prompt");
+            }
+            else if (arg == "color")
+            {
+                // white > black
+                setcol(ConsoleColor.White);
+                prnt("white, ", false);
+                setcol(ConsoleColor.Gray);
+                prnt("gray, ", false);
+                setcol(ConsoleColor.DarkGray);
+                prnt("darkgray, ", false);
+                setcol(ConsoleColor.Black);
+                Console.BackgroundColor = ConsoleColor.White;
+                prnt("black", false);
+                Console.BackgroundColor = currentBg;
+                ResForegroundColor();
+                prnt(", ", false);
+
+                // red
+                setcol(ConsoleColor.Red);
+                prnt("red, ", false);
+                setcol(ConsoleColor.DarkRed);
+                prnt("darkred, ", false);
+                setcol(ConsoleColor.Magenta);
+                
+                // magenta
+                prnt("magenta, ", false);
+                setcol(ConsoleColor.DarkMagenta);
+                prnt("darkmagenta, ", false);
+                
+                // blue
+                setcol(ConsoleColor.Cyan);
+                prnt("cyan, ", false);
+                setcol(ConsoleColor.DarkCyan);
+                prnt("darkcyan, ", false);
+                setcol(ConsoleColor.Blue);
+                prnt("blue, ", false);
+                setcol(ConsoleColor.DarkBlue);
+                prnt("darkblue, ", false);
+
+                // green
+                setcol(ConsoleColor.Green);
+                prnt("green, ", false);
+                setcol(ConsoleColor.DarkGreen);
+                prnt("darkgreen, ", false);
+
+                // yellow
+                setcol(ConsoleColor.Yellow);
+                prnt("yellow, ", false);
+                setcol(ConsoleColor.DarkYellow);
+                prnt("darkyellow");
+
+                // reset color
+                setcol(ConsoleColor.Yellow);
+                prnt("\nto reset color, use \"reset\" and thats it");
+            }
+            else if (arg == "beep")
+            {
+                setcol(ConsoleColor.Yellow);
+                prnt("- beep: just... beeps :skull:");
+            }
+            else if (arg == "random")
+            {
+                setcol(ConsoleColor.Yellow);
+                prnt("- random: random a number ranged from 1 - 100");
+            }
+            else if (arg == "sleep" || arg == "wait")
+            {
+                setcol(ConsoleColor.Yellow);
+                prnt("- wait / sleep: waits for how many milleseconds");
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("unknown guide topic :c");
+            }
+
+            ResForegroundColor();
+        }
+        
+        // fisdraw
+        static void FisDraw()
+        {
+            Console.Clear();
+            Console.CursorVisible = false;
+
+            int width = 60;
+            int height = 20;
+
+            char[,] canvas = new char[height, width];
+
+            // fill canvas
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    canvas[y, x] = ' ';
+                }
+            }
+
+            int px = width / 2;
+            int py = height / 2;
+
+            bool running = true;
+
+            while (running)
+            {
+                // draw everything
+                Console.SetCursorPosition(0, 0);
+
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("fisdraw");
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine("WASD / IJKL / arrow keys = move | SPACE / ENTER = draw | C = clear | ESC / Q = exit\n");
+
+                for (int y = 0; y < height; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        // cursor/player
+                        if (x == px && y == py)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.Write('@');
+                        }
+                        else
+                        {
+                            Console.ForegroundColor = ConsoleColor.White;
+                            Console.Write(canvas[y, x]);
+                        }
+                    }
+
+                    Console.WriteLine();
+                }
+
+                // input
+                ConsoleKeyInfo key = Console.ReadKey(true);
+
+                switch (key.Key)
+                {
+                    // up
+                    case ConsoleKey.W: // default WASD
+                    case ConsoleKey.I: // right IJKL
+                    case ConsoleKey.UpArrow: // arrow keys
+                        if (py > 0)
+                            py--;
+                        break;
+
+                    // down
+                    case ConsoleKey.S:
+                    case ConsoleKey.K:
+                    case ConsoleKey.DownArrow:
+                        if (py < height - 1)
+                            py++;
+                        break;
+
+                    // left
+                    case ConsoleKey.A:
+                    case ConsoleKey.J:
+                    case ConsoleKey.LeftArrow:
+                        if (px > 0)
+                            px--;
+                        break;
+
+
+                    // right
+                    case ConsoleKey.D:
+                    case ConsoleKey.L:
+                    case ConsoleKey.RightArrow:
+                        if (px < width - 1)
+                            px++;
+                        break;
+
+
+                    // draw
+                    case ConsoleKey.Spacebar:
+                    case ConsoleKey.Enter:
+                        canvas[py, px] = '#';
+                        break;
+
+                    case ConsoleKey.C:
+                        // clear canvas
+                        for (int y = 0; y < height; y++)
+                        {
+                            for (int x = 0; x < width; x++)
+                            {
+                                canvas[y, x] = ' ';
+                            }
+                        }
+
+                        break;
+
+                    case ConsoleKey.Escape:
+                    case ConsoleKey.Q:
+                        running = false;
+                        break;
+                }
+            }
+
+            Console.CursorVisible = true;
+            Console.Clear();
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("exited fisdraw.");
         }
     }
 }
