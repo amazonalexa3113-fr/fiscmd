@@ -8,7 +8,7 @@ for context, ts screams for .net 6.0 long term support, which requires windows 7
 cuz well... obviously this console app was too uh simple :skull:
 and also... cross platform :D (works well + tested on windows + real linux)
 
-u can edit/add anything here and give it a name as long as ur not copying me :skull:
+its open source so u can edit/add anything here and give it a name as long as ur not copying me :skull:
 especially editing the PrintPrompt() function, cuz thats where the ><>$ thing comes from
 
 made entirely using the default csharp language
@@ -16,14 +16,6 @@ made entirely using the default csharp language
 bye :D
 
 more than 5 thousand worth of lines :sob::pray: (honorable mention: all made by chatgpt and a 13 yo teenager named swindow)
-
-GOOD NEWS:
-i had replaced every
-string path = Path.Combine(currentDir, args[1]);
-with:
-string path = Path.Combine(currentDir, string.Join(" ", args.Skip(1)));
-
-so that every file interaction functions (or voids whatever u say) now supports SPACING :D
 
 */
 
@@ -39,6 +31,7 @@ using System.Text;
 using System.Threading;
 // parse quotes helper (to let file interaction functions handles spacing in files' name)
 using System.Text.RegularExpressions;
+using System.Net.NetworkInformation;
 
 namespace fis
 {
@@ -58,6 +51,7 @@ namespace fis
         static bool importedFissnake = false;
         static bool importedFisscript = false;
         static bool importedFisdraw = false;
+        static bool importedStars = false;
 		// if u wanna add more importable commands, just add this:
 		// static bool importedCommand = false;
 		// note that it MUST be false here and true later
@@ -100,7 +94,11 @@ namespace fis
             "killproc","fiskill","kill",
             "sudo",
             "fissnake","snake",
-            "fisscript","script","scriptfile","scr"
+            "fisscript","script","scriptfile","scr",
+            "fisdraw","draw","fispaint",
+            "netwatch",
+            "diskparty","diskusages",
+            "fistars","fisstar","stars","star"
         };
 
         static void Main(string[] args)
@@ -189,7 +187,7 @@ namespace fis
                         Console.ForegroundColor = ConsoleColor.White;
                         Console.WriteLine("any key to exit sir ;-;");
                         Console.ReadKey(true);
-                        ResForegroundColor();
+                        Console.ResetColor(); // yk what i mean (who uses ResForegroundColor() upon exiting :skull:)
                         return;
 
                     case "info":
@@ -395,6 +393,9 @@ namespace fis
                         Console.WriteLine();
                         break;
 
+                    case "netwatch": NetWatch(); break;
+
+                    case "diskparty": DiskParty(); break;
 
                     // importable command
                     case "importcmd":
@@ -426,7 +427,17 @@ namespace fis
                         bool ye4 = WarnNotImported(importedFisdraw);
                         if (ye4) break;
 
-                        FisDraw();
+                        FisDraw(parts);
+                        break;
+
+                    case "fisstar":
+                    case "fisstars":
+                    case "star":
+                    case "stars":
+                        bool ye6 = WarnNotImported(importedStars);
+                        if (ye6) break;
+
+                        Stars();
                         break;
 
                     // unimportable command that used to be importable back then
@@ -459,7 +470,7 @@ namespace fis
         // so DO NOT manually call this again in every void/function.
         //
         // for single-path file interaction voids, use:
-        // string path = Path.Combine(currentDir, string.Join(" ", args.Skip(1)));
+        // string [any] = Path.Combine(currentDir, string.Join(" ", args.Skip(1)));
         //
         // for multi-path commands (copy/move/rename/etc),
         // REQUIRE QUOTES in paths with spaces.
@@ -787,104 +798,196 @@ namespace fis
 
         static string ReadCommand()
         {
-            var buffer = new StringBuilder();
+            List<char> buffer = new();
+            int cursor = 0;
 
             while (true)
             {
-                var key = Console.ReadKey(true);
+                // received key
+                ConsoleKeyInfo key = Console.ReadKey(true);
 
+                // enter
                 if (key.Key == ConsoleKey.Enter)
                 {
                     Console.WriteLine();
-                    return buffer.ToString();
+                    return new string(buffer.ToArray());
                 }
-                else if (key.Key == ConsoleKey.Backspace && buffer.Length > 0)
+
+                // arrow keys
+                else if (key.Key == ConsoleKey.LeftArrow)
                 {
-                    buffer.Length--;
-                    Console.Write("\b \b");
+                    if (cursor > 0)
+                    {
+                        cursor--;
+                        Console.CursorLeft--;
+                    }
                 }
+
+                else if (key.Key == ConsoleKey.RightArrow)
+                {
+                    if (cursor < buffer.Count)
+                    {
+                        cursor++;
+                        Console.CursorLeft++;
+                    }
+                }
+
+                // backscape (to delete a character)
+                else if (key.Key == ConsoleKey.Backspace)
+                {
+                    if (cursor > 0)
+                    {
+                        buffer.RemoveAt(cursor - 1);
+                        cursor--;
+
+                        RedrawLine(buffer, cursor);
+                    }
+                }
+
+                // same thing but with [DELETE] key
+                else if (key.Key == ConsoleKey.Delete)
+                {
+                    if (cursor < buffer.Count)
+                    {
+                        buffer.RemoveAt(cursor);
+
+                        RedrawLine(buffer, cursor);
+                    }
+                }
+
+                // home and end keys ([FN] + [LEFT/RIGHT ARROW] on some devices' keyboard especially laptops if yk what i mean)
+                else if (key.Key == ConsoleKey.Home)
+                {
+                    cursor = 0;
+                    RedrawLine(buffer, cursor);
+                }
+
+                else if (key.Key == ConsoleKey.End)
+                {
+                    cursor = buffer.Count;
+                    RedrawLine(buffer, cursor);
+                }
+
+                // show last command upon pressing the up/down arrow key
                 else if (key.Key == ConsoleKey.UpArrow)
                 {
                     if (history.Count > 0 && historyIndex > 0)
                     {
                         historyIndex--;
-                        ReplaceLine(buffer, history[historyIndex]);
+
+                        buffer = history[historyIndex].ToList();
+                        cursor = buffer.Count;
+
+                        RedrawLine(buffer, cursor);
                     }
                 }
+
                 else if (key.Key == ConsoleKey.DownArrow)
                 {
-                    if (history.Count > 0 && historyIndex < history.Count - 1)
+                    if (historyIndex < history.Count - 1)
                     {
                         historyIndex++;
-                        ReplaceLine(buffer, history[historyIndex]);
+
+                        buffer = history[historyIndex].ToList();
                     }
                     else
                     {
                         historyIndex = history.Count;
-                        ReplaceLine(buffer, "");
+                        buffer = new List<char>();
                     }
+
+                    cursor = buffer.Count;
+
+                    RedrawLine(buffer, cursor);
                 }
-                else if (key.Key == ConsoleKey.L &&
-                         key.Modifiers.HasFlag(ConsoleModifiers.Control))
+
+                // tab autocorrect
+                else if (key.Key == ConsoleKey.Tab)
+                {
+                    AutoComplete(ref buffer, ref cursor);
+                }
+
+                // [CTRL] + [L] cls logic
+                else if (key.Modifiers.HasFlag(ConsoleModifiers.Control) && key.Key == ConsoleKey.L)
                 {
                     Console.Clear();
 
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    PrintPrompt();
-                    ResForegroundColor();
+                    Console.SetCursorPosition(0, 0);
 
-                    Console.Write(buffer.ToString());
+                    RedrawLine(buffer, cursor);
                 }
-                else if (key.Key == ConsoleKey.Tab)
-                {
-                    AutoComplete(buffer);
-                }
+
+                // idk what is ts
                 else if (!char.IsControl(key.KeyChar))
                 {
-                    buffer.Append(key.KeyChar);
-                    Console.Write(key.KeyChar);
+                    buffer.Insert(cursor, key.KeyChar);
+                    cursor++;
+
+                    RedrawLine(buffer, cursor);
                 }
             }
         }
 
-        static void AutoComplete(StringBuilder buffer)
+        // RedrawLine helper void for ReadCommand void
+        static void RedrawLine(List<char> buffer, int cursor)
         {
-            string current = buffer.ToString().ToLower();
+            int top = Console.CursorTop;
 
-            var matches = commands.Where(c => c.StartsWith(current)).ToList();
+            string prompt = GetPrompt();
+
+            Console.SetCursorPosition(0, top);
+
+            // prompt color
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write(prompt);
+
+            // input color
+            Console.ForegroundColor = currentFg;
+            int width = Console.WindowWidth;
+
+            Console.Write(new string(' ', width - 1));
+
+            Console.SetCursorPosition(0, top);
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write(prompt);
+
+            Console.ForegroundColor = currentFg;
+            Console.Write(new string(buffer.ToArray()));
+
+            Console.SetCursorPosition(prompt.Length + cursor, top);
+        }
+
+        // GetPrompt helper void for RedrawLine void
+        static string GetPrompt()
+        {
+            return $"><[{currentDir}]>$ ";
+        }
+
+        static void AutoComplete(ref List<char> buffer, ref int cursor)
+        {
+            string current = new string(buffer.ToArray()).ToLower();
+
+            var matches = commands
+                .Where(c => c.StartsWith(current))
+                .ToList();
 
             if (matches.Count == 1)
             {
-                ReplaceLine(buffer, matches[0]);
+                buffer = matches[0].ToList();
+                cursor = buffer.Count;
+
+                RedrawLine(buffer, cursor);
             }
             else if (matches.Count > 1)
             {
                 Console.WriteLine();
+
                 Console.ForegroundColor = ConsoleColor.DarkGray;
                 Console.WriteLine(string.Join("  ", matches));
-                ResForegroundColor();
 
-                Console.ForegroundColor = ConsoleColor.Green;
-                PrintPrompt();
-                ResForegroundColor();
-                Console.Write(buffer.ToString());
+                RedrawLine(buffer, cursor);
             }
-        }
-
-        static void ReplaceLine(StringBuilder buffer, string newText)
-        {
-            int currentLineCursor = Console.CursorTop;
-            Console.SetCursorPosition(0, currentLineCursor);
-            Console.Write(new string(' ', Console.WindowWidth));
-            Console.SetCursorPosition(0, currentLineCursor);
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            PrintPrompt();
-            ResForegroundColor();
-
-            buffer.Clear();
-            buffer.Append(newText);
-            Console.Write(newText);
         }
 
         static void SetColor(string input)
@@ -1057,6 +1160,9 @@ namespace fis
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine("(alternatively u can press ctrl + c to exit");
             Console.WriteLine("unless ur on windows without ctrl + shift + c copying method enabled)");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("show disk storage n stuff - diskparty");
+            Console.WriteLine("ping 1.1.1.1 and test network - netwatch");
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine("stuff that has stuff to do with files (be careful)");
@@ -2406,7 +2512,7 @@ namespace fis
         static void ShowVersion()
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("fiscmd v1.5 beta ><>");
+            Console.WriteLine("fiscmd v1.6 beta ><>");
             /*
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine("(LETS GO FINAL V2 WE COOKED)");
@@ -2417,7 +2523,7 @@ namespace fis
             Console.WriteLine(".NET 6.0 LTS");
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.DarkYellow;
-            Console.WriteLine("just simply walk around the damn wall :skull::wilted-flower:");
+            Console.WriteLine("pov: me when the");
             ResForegroundColor();
         }
 
@@ -2734,21 +2840,22 @@ namespace fis
         static void ShowUpdate()
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            TypeWrite("v1.5 beta logs (press any key for each next log ok):\n");
+            TypeWrite("v1.6 beta logs (press any key for each next log ok):\n");
             Console.ReadKey(true);
-            TypeWrite("- updated the importable command \"fisscript\" (see \"fisscript /guide\" for help)");
+            TypeWrite("- updated the importable command \"fisdraw\" (un/redo support + erase 1 pixel + save/load)");
             Console.ReadKey(true);
-            TypeWrite("- NEW IMPORTABLE COMMAND: fisdraw (see \"import\" for more)");
+            TypeWrite("- apoligized for confusing yall with \"fisuni\" in v1.5 :sob::wilted-flower:");
             Console.ReadKey(true);
-            TypeWrite("- NEW COMMAND: \"initfis\"");
+            TypeWrite("- ", 10, false);
+            Console.ForegroundColor = ConsoleColor.Red;
+            TypeWrite("completely rewrote fiscmd command input system", 10, false);
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            TypeWrite("\nso now that the cursor can move around using arrow keys and ofc Home/End keys");
             Console.ReadKey(true);
-            TypeWrite("- no one asked, but i updated the fis logo to be like this: ", 10, false);
-            PrintFisCoolAsf(true, 10); // ><>
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.ReadKey(true);
-            TypeWrite("- updated the \"calc\" command to be supporting the infamous ^ symbol");
-            Console.ReadKey(true);
-            TypeWrite("- updated the icon + title :D");
+            TypeWrite("- NEW COMMANDS: netwatch, diskparty (seek \"help\" for more brotha)");
+            TypeWrite("- NEW IMPORTABLE COMMAND: fisstars (seek \"import\" for more brotha)");
+
             Console.ReadKey(true);
             TypeWrite("- thats it lmao");
             Console.ReadKey(true);
@@ -3093,7 +3200,166 @@ namespace fis
 
             ResForegroundColor();
         }
+        
+        // netwatch
+        static void NetWatch()
+        {
+            Ping ping = new Ping();
+            Random r = new Random();
 
+            Console.WriteLine("press any key to stop...\n");
+
+            while (!Console.KeyAvailable)
+            {
+                try
+                {
+                    PingReply reply = ping.Send("1.1.1.1");
+
+                    Console.Clear();
+
+                    if (reply.Status == IPStatus.Success)
+                    {
+                        long ms = reply.RoundtripTime;
+
+                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        Console.WriteLine($"PING: {ms}ms");
+
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.Write("GRAPH: ");
+
+                        for (int i = 0; i < 20; i++)
+                        {
+                            Console.Write(r.Next(0, 2) == 0 ? "-" : "_");
+                        }
+
+                        Console.WriteLine();
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("bros internet died :sob:");
+                    }
+                }
+                catch
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("router exploded");
+                }
+
+                Thread.Sleep(1000);
+            }
+
+            Console.ReadKey(true);
+            ResForegroundColor();
+        }
+
+        // diskparty (shows disk usages)
+        static void DiskParty()
+        {
+            DriveInfo[] drives = DriveInfo.GetDrives();
+            
+            foreach (DriveInfo d in drives)
+            {
+                try
+                {
+                    if (!d.IsReady)
+                        continue;
+
+                    long total = d.TotalSize;
+                    long free = d.TotalFreeSpace;
+                    long used = total - free;
+
+                    int percent = (int)((used * 100) / total);
+                    int bars = percent / 10;
+
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.Write($"{d.Name} [");
+
+                    for (int i = 0; i < 10; i++)
+                    {
+                        Console.Write(i < bars ? "#" : "-");
+                    }
+
+                    Console.WriteLine($"] {percent}%");
+                }
+                catch
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"failed to read {d.Name}");
+                }
+            }
+
+            ResForegroundColor();
+        }
+
+        // stars ascii :D
+        static void Stars()
+        {
+            Random r = new Random();
+
+            int width = Console.WindowWidth;
+            int height = Console.WindowHeight;
+
+            // fade animation
+            char[] fadeChars = { '.', '+', '*', '0', '*', '+', '.' };
+
+            Console.CursorVisible = false;
+
+            // store stars + animation frame
+            int[,] stars = new int[width, height];
+
+            while (!Console.KeyAvailable)
+            {
+                Console.SetCursorPosition(0, 0);
+
+                for (int y = 0; y < height - 1; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        // randomly spawn star
+                        if (stars[x, y] == 0 && r.Next(0, 90) == 0)
+                        {
+                            stars[x, y] = 1;
+                        }
+
+                        int frame = stars[x, y];
+
+                        if (frame > 0)
+                        {
+                            Console.ForegroundColor = currentFg;
+                            Console.BackgroundColor = currentBg;
+
+                            Console.Write(fadeChars[frame - 1]);
+
+                            frame++;
+
+                            // end animation
+                            if (frame > fadeChars.Length)
+                                frame = 0;
+
+                            stars[x, y] = frame;
+                        }
+                        else
+                        {
+                            Console.Write(" ");
+                        }
+                    }
+
+                    Console.WriteLine();
+                }
+
+                Thread.Sleep(80);
+            }
+
+            Console.ReadKey(true);
+
+            Console.CursorVisible = true;
+
+            Console.ForegroundColor = currentFg;
+            Console.BackgroundColor = currentBg;
+
+            Console.Clear();
+        }
 
 
         // imports
@@ -3119,8 +3385,10 @@ namespace fis
                 Console.WriteLine("- a snake game i made - fissnake / snake");
                 Console.WriteLine("- create a .fis file fiscmd script - fisscript / scriptfile / script / scr");
                 Console.WriteLine("- draw - fisdraw / fispaint / draw");
-                Console.WriteLine("- unicode en/decoder - fisuni / fisunicode / unicode");
-                ResForegroundColor();
+                Console.WriteLine("- view the stars :D - fisstars / fisstar / stars / star");
+    
+
+                        ResForegroundColor();
                 return;
             }
 
@@ -3149,6 +3417,13 @@ namespace fis
                 Display = "fisdraw / fispaint / draw",
                 Imported = importedFisdraw,
                 ImportAction = new Action(() => importedFisdraw = true)
+            },
+            new
+            {
+                Names = new[] { "fisstars","fisstar","stars","star" },
+                Display = "fisstars / fisstar / stars / star",
+                Imported = importedStars,
+                ImportAction = new Action(() => importedStars = true)
             }
             // now add any importable commands like this
             /*
@@ -5114,9 +5389,9 @@ func hi {
 
             ResForegroundColor();
         }
-        
+
         // fisdraw
-        static void FisDraw()
+        static void FisDraw(string[] args)
         {
             Console.Clear();
             Console.CursorVisible = false;
@@ -5138,6 +5413,67 @@ func hi {
             int px = width / 2;
             int py = height / 2;
 
+            // current opened file
+            string currentFile = null;
+
+            // auto-open file from args
+            if (args.Length > 1)
+            {
+                currentFile =
+                    Path.Combine(currentDir,
+                    string.Join(" ", args.Skip(1)));
+
+                if (!currentFile.EndsWith(".txt"))
+                    currentFile += ".txt";
+
+                if (File.Exists(currentFile))
+                {
+                    string[] lines = File.ReadAllLines(currentFile);
+
+                    for (int y = 0;
+                        y < height && y < lines.Length;
+                        y++)
+                    {
+                        for (int x = 0;
+                            x < width &&
+                            x < lines[y].Length;
+                            x++)
+                        {
+                            canvas[y, x] = lines[y][x];
+                        }
+                    }
+                }
+            }
+
+            // undo / redo stacks
+            Stack<char[,]> undoStack = new Stack<char[,]>();
+            Stack<char[,]> redoStack = new Stack<char[,]>();
+
+            // clone canvas helper
+            char[,] CloneCanvas(char[,] source)
+            {
+                char[,] copy = new char[height, width];
+
+                for (int y = 0; y < height; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        copy[y, x] = source[y, x];
+                    }
+                }
+
+                return copy;
+            }
+
+            // save state before edit
+            void SaveState()
+            {
+                undoStack.Push(CloneCanvas(canvas));
+
+                // new edit clears redo history
+                redoStack.Clear();
+            }
+
             bool running = true;
 
             while (running)
@@ -5147,8 +5483,22 @@ func hi {
 
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine("fisdraw");
+
                 Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine("WASD / IJKL / arrow keys = move | SPACE / ENTER = draw | C = clear | ESC / Q = exit\n");
+
+                if (currentFile != null)
+                {
+                    Console.WriteLine(
+                        $"opened: {Path.GetFileName(currentFile)}");
+                }
+                else
+                {
+                    Console.WriteLine("opened: untitled");
+                }
+
+                Console.WriteLine(@"WASD / IJKL / arrow keys = move | SPACE / ENTER = draw | P = erase
+Z = undo | Y = redo | O = save | U = load | C = clear | ESC / Q = exit");
+                Console.WriteLine(); // extra line
 
                 for (int y = 0; y < height; y++)
                 {
@@ -5176,47 +5526,93 @@ func hi {
                 switch (key.Key)
                 {
                     // up
-                    case ConsoleKey.W: // default WASD
-                    case ConsoleKey.I: // right IJKL
+                    case ConsoleKey.W: // classic WASD
+                    case ConsoleKey.I: // right handed IJKL
                     case ConsoleKey.UpArrow: // arrow keys
+
                         if (py > 0)
                             py--;
+
                         break;
 
                     // down
                     case ConsoleKey.S:
                     case ConsoleKey.K:
                     case ConsoleKey.DownArrow:
+
                         if (py < height - 1)
                             py++;
+
                         break;
 
                     // left
                     case ConsoleKey.A:
                     case ConsoleKey.J:
                     case ConsoleKey.LeftArrow:
+
                         if (px > 0)
                             px--;
-                        break;
 
+                        break;
 
                     // right
                     case ConsoleKey.D:
                     case ConsoleKey.L:
                     case ConsoleKey.RightArrow:
+
                         if (px < width - 1)
                             px++;
-                        break;
 
+                        break;
 
                     // draw
                     case ConsoleKey.Spacebar:
                     case ConsoleKey.Enter:
+
+                        SaveState();
+
                         canvas[py, px] = '#';
+
                         break;
 
+                    // erase
+                    case ConsoleKey.P:
+
+                        SaveState();
+
+                        canvas[py, px] = ' ';
+
+                        break;
+
+                    // undo
+                    case ConsoleKey.Z:
+
+                        if (undoStack.Count > 0)
+                        {
+                            redoStack.Push(CloneCanvas(canvas));
+
+                            canvas = undoStack.Pop();
+                        }
+
+                        break;
+
+                    // redo
+                    case ConsoleKey.Y:
+
+                        if (redoStack.Count > 0)
+                        {
+                            undoStack.Push(CloneCanvas(canvas));
+
+                            canvas = redoStack.Pop();
+                        }
+
+                        break;
+
+                    // clear
                     case ConsoleKey.C:
-                        // clear canvas
+
+                        SaveState();
+
                         for (int y = 0; y < height; y++)
                         {
                             for (int x = 0; x < width; x++)
@@ -5227,18 +5623,177 @@ func hi {
 
                         break;
 
+                    // save
+                    case ConsoleKey.O:
+
+                        try
+                        {
+                            // ask filename if none opened
+                            if (currentFile == null)
+                            {
+                                Console.CursorVisible = true;
+
+                                int inputY = height + 5;
+
+                                Console.SetCursorPosition(0, inputY);
+                                Console.Write(
+                                    new string(' ', Console.WindowWidth));
+
+                                Console.SetCursorPosition(0, inputY);
+
+                                Console.ForegroundColor =
+                                    ConsoleColor.Cyan;
+
+                                Console.Write("save as: ");
+
+                                string saveInput = Console.ReadLine();
+                                saveInput = saveInput.Trim('"');
+
+                                if (!string.IsNullOrWhiteSpace(saveInput))
+                                {
+                                    saveInput = saveInput.Trim('"');
+
+                                    if (Path.IsPathRooted(saveInput))
+                                    {
+                                        currentFile = saveInput;
+                                    }
+                                    else
+                                    {
+                                        currentFile =
+                                            Path.Combine(currentDir,
+                                            saveInput);
+                                    }
+
+                                    if (!currentFile.EndsWith(".txt"))
+                                        currentFile += ".txt";
+                                }
+
+                                Console.CursorVisible = false;
+                            }
+
+                            // save file
+                            if (currentFile != null)
+                            {
+                                using (StreamWriter sw =
+                                    new StreamWriter(currentFile))
+                                {
+                                    for (int y = 0; y < height; y++)
+                                    {
+                                        string line = "";
+
+                                        for (int x = 0; x < width; x++)
+                                        {
+                                            line += canvas[y, x];
+                                        }
+
+                                        sw.WriteLine(line);
+                                    }
+                                }
+                            }
+
+                            Console.Clear();
+                        }
+                        catch
+                        {
+                            Console.CursorVisible = false;
+                            Console.Clear();
+                        }
+
+                        break;
+
+                    // load
+                    case ConsoleKey.U:
+
+                        try
+                        {
+                            Console.CursorVisible = true;
+
+                            int inputY = height + 5;
+
+                            Console.SetCursorPosition(0, inputY);
+                            Console.Write(
+                                new string(' ', Console.WindowWidth));
+
+                            Console.SetCursorPosition(0, inputY);
+
+                            Console.ForegroundColor =
+                                ConsoleColor.Cyan;
+
+                            Console.Write("load file: ");
+
+                            string loadInput = Console.ReadLine();
+                            loadInput = loadInput.Trim('"');
+
+                            if (!string.IsNullOrWhiteSpace(loadInput))
+                            {
+                                string loadPath;
+
+                                if (Path.IsPathRooted(loadInput))
+                                {
+                                    loadPath = loadInput;
+                                }
+                                else
+                                {
+                                    loadPath = Path.Combine(currentDir, loadInput);
+                                }
+
+                                if (!loadPath.EndsWith(".txt"))
+                                    loadPath += ".txt";
+
+                                if (File.Exists(loadPath))
+                                {
+                                    string[] lines =
+                                        File.ReadAllLines(loadPath);
+
+                                    SaveState();
+
+                                    currentFile = loadPath;
+
+                                    for (int y = 0;
+                                        y < height &&
+                                        y < lines.Length;
+                                        y++)
+                                    {
+                                        for (int x = 0;
+                                            x < width &&
+                                            x < lines[y].Length;
+                                            x++)
+                                        {
+                                            canvas[y, x] =
+                                                lines[y][x];
+                                        }
+                                    }
+                                }
+                            }
+
+                            Console.CursorVisible = false;
+
+                            Console.Clear();
+                        }
+                        catch
+                        {
+                            Console.CursorVisible = false;
+                            Console.Clear();
+                        }
+
+                        break;
+
+                    // exit
                     case ConsoleKey.Escape:
                     case ConsoleKey.Q:
+
                         running = false;
+
                         break;
                 }
             }
 
             Console.CursorVisible = true;
+
             Console.Clear();
 
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("exited fisdraw.");
+            Console.WriteLine("exited fisdraw");
         }
     }
 }
