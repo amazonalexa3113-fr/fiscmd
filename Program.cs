@@ -15,7 +15,7 @@ made entirely using the default csharp language
 
 bye :D
 
-more than 5 thousand worth of lines :sob::pray: (honorable mention: all made by chatgpt and a 13 yo teenager named swindow)
+more than 6 thousand worth of lines :sob::pray: (honorable mention: all made by chatgpt and a 13 yo teenager named swindow)
 
 */
 
@@ -58,8 +58,11 @@ namespace fis
 		// u can use it in the ImportCmd() function (or void whatever u say)
 
         // current fore/background
-        static ConsoleColor currentFg = ConsoleColor.Gray;
+        static ConsoleColor currentFg = ConsoleColor.Green;
         static ConsoleColor currentBg = ConsoleColor.Black;
+
+        // smth RedrawLine() would need
+        static int inputStartTop;
 
         // commands for tab autocomplete (well... NOT exactly real ><>$ autocom)
         static List<string> commands = new List<string>
@@ -105,7 +108,7 @@ namespace fis
         {
             Console.CursorVisible = false;
 
-            Console.Title = "fiscmd ><>";
+            Console.Title = "have a look have a look one pound fis ><>";
 
             Console.ForegroundColor = ConsoleColor.Cyan;
             PrintFisCoolAsf(true, 25, false);
@@ -123,9 +126,6 @@ namespace fis
                 Console.ForegroundColor = currentFg;
                 Console.BackgroundColor = currentBg;
 
-                // prompt
-                Console.ForegroundColor = ConsoleColor.Green;
-                //              Console.Write("><>$ ");
                 PrintPrompt();
 
 
@@ -215,7 +215,10 @@ namespace fis
                     case "eg": ShowExample(); break;
 
                     case "clear":
-                    case "cls": Console.Clear(); break;
+                    case "cls":
+                        Console.Clear();
+                        inputStartTop = 0;
+                        break;
 
                     case "time":
                     case "when":
@@ -372,7 +375,11 @@ namespace fis
                     case "whoami":
                     case "%userprofile%": ShowUser(); break;
 
-                    case "echo": DoEcho(rawInput); break;
+                    case "echo":
+                        Console.ResetColor();
+                        DoEcho(rawInput);
+                        ResForegroundColor();
+                        break;
 
                     case "showupdates":
                     case "showupdate":
@@ -798,8 +805,16 @@ namespace fis
 
         static string ReadCommand()
         {
+            Console.ForegroundColor = currentFg;
+            Console.BackgroundColor = currentBg;
+
             List<char> buffer = new();
             int cursor = 0;
+
+            inputStartTop = Console.CursorTop;
+
+            Console.ForegroundColor = currentFg;
+            Console.BackgroundColor = currentBg;
 
             while (true)
             {
@@ -809,8 +824,14 @@ namespace fis
                 // enter
                 if (key.Key == ConsoleKey.Enter)
                 {
+                    Console.ResetColor();
                     Console.WriteLine();
-                    return new string(buffer.ToArray());
+
+                    string result = new string(buffer.ToArray());
+
+                    inputStartTop = Console.CursorTop;
+
+                    return result;
                 }
 
                 // arrow keys
@@ -825,10 +846,28 @@ namespace fis
 
                 else if (key.Key == ConsoleKey.RightArrow)
                 {
-                    if (cursor < buffer.Count)
+                    string current = new string(buffer.ToArray());
+
+                    var match = commands.FirstOrDefault(c =>
+                        c.StartsWith(current) &&
+                        c != current
+                    );
+
+                    // accept ghost suggestion
+                    if (cursor == buffer.Count && match != null)
+                    {
+                        buffer = match.ToList();
+                        cursor = buffer.Count;
+
+                        RedrawLine(buffer, cursor);
+                    }
+
+                    // normal cursor movement
+                    else if (cursor < buffer.Count)
                     {
                         cursor++;
-                        Console.CursorLeft++;
+
+                        RedrawLine(buffer, cursor);
                     }
                 }
 
@@ -901,11 +940,12 @@ namespace fis
                     RedrawLine(buffer, cursor);
                 }
 
-                // tab autocorrect
+                /* tab autocorrect (obselette due to syntax highlight)
                 else if (key.Key == ConsoleKey.Tab)
                 {
                     AutoComplete(ref buffer, ref cursor);
                 }
+                */
 
                 // [CTRL] + [L] cls logic
                 else if (key.Modifiers.HasFlag(ConsoleModifiers.Control) && key.Key == ConsoleKey.L)
@@ -913,6 +953,8 @@ namespace fis
                     Console.Clear();
 
                     Console.SetCursorPosition(0, 0);
+
+                    inputStartTop = 0;
 
                     RedrawLine(buffer, cursor);
                 }
@@ -931,39 +973,177 @@ namespace fis
         // RedrawLine helper void for ReadCommand void
         static void RedrawLine(List<char> buffer, int cursor)
         {
-            int top = Console.CursorTop;
+            Console.ForegroundColor = currentFg;
+            Console.BackgroundColor = currentBg;
 
-            string prompt = GetPrompt();
+            int top = inputStartTop;
 
+            string prompt = $"><[{currentDir}]>$ ";
+            string input = new string(buffer.ToArray());
+
+            // calculate how many rows the input occupies
+            int totalLength = prompt.Length + input.Length + 10;
+
+            int linesUsed = (totalLength / Console.BufferWidth) + 2;
+
+            // clear all affected lines
+            for (int i = 0; i < linesUsed; i++)
+            {
+                Console.SetCursorPosition(0, top + i);
+
+                Console.ForegroundColor = currentFg;
+                Console.BackgroundColor = currentBg;
+
+                Console.Write(new string(' ', Console.BufferWidth - 1));
+            }
+
+            // return to original line
             Console.SetCursorPosition(0, top);
 
-            // prompt color
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.Write(prompt);
+            // prompt rendering
+            // save colors
+            var prevFg = Console.ForegroundColor;
+            var prevBg = Console.BackgroundColor;
 
-            // input color
+            // render prompt
             Console.ForegroundColor = currentFg;
-            int width = Console.WindowWidth;
+            Console.BackgroundColor = currentBg;
 
-            Console.Write(new string(' ', width - 1));
+            Console.Write("><[" + currentDir + "]>$ ");
 
-            Console.SetCursorPosition(0, top);
+            // restore immediately
+            Console.ForegroundColor = prevFg;
+            Console.BackgroundColor = prevBg;
 
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.Write(prompt);
-
+            // reset after prompt
             Console.ForegroundColor = currentFg;
-            Console.Write(new string(buffer.ToArray()));
+            Console.BackgroundColor = currentBg;
 
-            Console.SetCursorPosition(prompt.Length + cursor, top);
+            // split command + args
+            string[] parts = input.Split(' ', 2);
+
+            string cmd = parts.Length > 0 ? parts[0] : "";
+            string args = parts.Length > 1 ? " " + parts[1] : "";
+
+            bool exact = commands.Contains(cmd);
+            bool partial = commands.Any(c => c.StartsWith(cmd));
+
+            // command highlighting
+            if (cmd.Length > 0)
+            {
+                // exactly correct command
+                if (exact)
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+
+                // unfinished command
+                else if (partial)
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+
+                // invalid command
+                else
+                    Console.ForegroundColor = ConsoleColor.Red;
+
+                var oldFg = Console.ForegroundColor;
+
+                Console.Write(cmd);
+
+                Console.ForegroundColor = currentFg;
+                Console.BackgroundColor = currentBg;
+            }
+
+            // reset after command
+            Console.ForegroundColor = currentFg;
+            Console.BackgroundColor = currentBg;
+
+            // arguments with highlighting
+            if (!string.IsNullOrEmpty(args))
+            {
+                string[] argParts = args.Split(' ');
+
+                foreach (string arg in argParts)
+                {
+                    if (string.IsNullOrWhiteSpace(arg))
+                        continue;
+
+                    Console.Write(" ");
+
+                    // switches / flags
+                    if (
+                        arg.StartsWith("-") ||
+                        arg.StartsWith("--") ||
+                        arg.StartsWith("/")
+                    )
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkCyan;
+                    }
+
+                    // quoted strings
+                    else if (
+                        arg.StartsWith("\"") &&
+                        arg.EndsWith("\"")
+                    )
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkYellow;
+                    }
+
+                    // paths
+                    else if (
+                        arg.Contains("\\") ||
+                        arg.Contains("/") ||
+                        arg.Contains(":")
+                    )
+                    {
+                        Console.ForegroundColor = ConsoleColor.Blue;
+                    }
+
+                    // normal args
+                    else
+                    {
+                        Console.ForegroundColor = currentFg;
+                    }
+
+                    Console.Write(arg);
+
+                    // reset after each arg
+                    Console.ForegroundColor = currentFg;
+                    Console.BackgroundColor = currentBg;
+                }
+            }
+
+            // ghost autocomplete
+            if (
+                partial &&
+                !exact &&
+                cmd.Length > 0
+            )
+            {
+                string match = commands.First(c => c.StartsWith(cmd));
+
+                string remain = match.Substring(cmd.Length);
+
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write(remain);
+            }
+
+
+            // reset colors before cursor restore
+            Console.ForegroundColor = currentFg;
+            Console.BackgroundColor = currentBg;
+
+            // restore cursor
+            int absolute = prompt.Length + cursor;
+
+            int newLeft = absolute % Console.BufferWidth;
+            int newTop = top + (absolute / Console.BufferWidth);
+
+            Console.SetCursorPosition(newLeft, newTop);
+
+            // final restore
+            Console.ForegroundColor = currentFg;
+            Console.BackgroundColor = currentBg;
         }
 
-        // GetPrompt helper void for RedrawLine void
-        static string GetPrompt()
-        {
-            return $"><[{currentDir}]>$ ";
-        }
-
+        /* obselette due to syntax highlight
         static void AutoComplete(ref List<char> buffer, ref int cursor)
         {
             string current = new string(buffer.ToArray()).ToLower();
@@ -989,6 +1169,7 @@ namespace fis
                 RedrawLine(buffer, cursor);
             }
         }
+        */
 
         static void SetColor(string input)
         {
@@ -1087,6 +1268,7 @@ namespace fis
             ResForegroundColor();
         }
 
+        // only applies to the ><>$ thingy (not whole stuff)
         static void ResForegroundColor()
         {
             Console.ForegroundColor = currentFg;
@@ -1197,8 +1379,10 @@ namespace fis
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("\nfor list of importable commands, type \"import\" and it'll shows the list :D");
             
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("\nmore are tab autocorrect! :D");
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("\nhonorable mention: tab autocorrect is obselette by the syntax highlight");
+			Console.ForegroundColor = ConsoleColor.DarkCyan;
+			Console.WriteLine("the tab autocorrect code still remains in the source code");
 
             ResForegroundColor();
         }
@@ -1669,8 +1853,9 @@ namespace fis
             if (args.Length < 2)
             {
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("usage: touch <filename>");
+                Console.WriteLine("usage: touch (/viewhex) <filename>");
                 Console.WriteLine("<filename> - name of the file needed to edit\n");
+                Console.WriteLine("(/hex) - optional switch that show hexes of the file instead of unicode chars");
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("anonnoyingly flashes for every arrow key u press");
                 Console.ForegroundColor = ConsoleColor.Cyan;
@@ -1679,7 +1864,19 @@ namespace fis
                 return;
             }
 
-            string filename = string.Join(" ", args.Skip(1)).Trim();
+            bool viewHex = args.Contains("/hex");
+            string filename = string.Join(" ", args.Where(a => a != "/hex").Skip(1)).Trim();
+
+            if (string.IsNullOrWhiteSpace(filename))
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("usage: touch (/viewhex) <filename>");
+                Console.WriteLine("(/hex) - optional switch that show hexes of the file instead of unicode chars");
+
+                ResForegroundColor();
+                return;
+            }
+
             string path = Path.Combine(currentDir, filename);
 
             List<string> lines = new List<string>();
@@ -1687,15 +1884,51 @@ namespace fis
             try
             {
                 if (File.Exists(path))
-                    lines = File.ReadAllLines(path).ToList();
+                {
+                    if (viewHex)
+                    {
+                        byte[] bytes = File.ReadAllBytes(path);
+
+                        for (int i = 0; i < bytes.Length; i += 16)
+                        {
+                            var chunk = bytes
+                                .Skip(i)
+                                .Take(16)
+                                .Select(b => b.ToString("X2"));
+
+                            lines.Add(string.Join(" ", chunk));
+                        }
+
+                        if (lines.Count == 0)
+                            lines.Add("");
+                    }
+                    else
+                    {
+                        lines = File.ReadAllLines(path).ToList();
+                    }
+                }
                 else
+                {
                     lines.Add("new file");
+                }
 
                 ResForegroundColor();
 
                 int cursorX = 0;
                 int cursorY = 0;
                 int scrollOffset = 0;
+
+                bool highNibble = true;
+
+                bool IsHexChar(char c)
+                {
+                    return Uri.IsHexDigit(c);
+                }
+
+                char NormalizeHex(char c)
+                {
+                    return char.ToUpper(c);
+                }
 
                 Console.Clear();
 
@@ -1731,7 +1964,42 @@ namespace fis
                         if (text.Length > winW)
                             text = text.Substring(0, winW);
 
-                        Console.Write(text.PadRight(winW));
+                        if (viewHex)
+                        {
+                            string ascii = "";
+
+                            string[] hexes =
+                                text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                            foreach (string h in hexes)
+                            {
+                                try
+                                {
+                                    byte b = Convert.ToByte(h, 16);
+
+                                    ascii +=
+                                        (b >= 32 && b <= 126)
+                                        ? (char)b
+                                        : '.';
+                                }
+                                catch
+                                {
+                                    ascii += '.';
+                                }
+                            }
+
+                            string combined =
+                                text.PadRight(16 * 3 + 4) + ascii;
+
+                            if (combined.Length > winW)
+                                combined = combined.Substring(0, winW);
+
+                            Console.Write(combined.PadRight(winW));
+                        }
+                        else
+                        {
+                            Console.Write(text.PadRight(winW));
+                        }
                     }
 
                     // =========================
@@ -1740,8 +2008,9 @@ namespace fis
                     Console.SetCursorPosition(0, winH - 2);
                     Console.ForegroundColor = ConsoleColor.DarkGray;
 
+                    string mode = viewHex ? "[HEX]" : "[TEXT]";
                     string status =
-                        $"ESC = quit | CTRL + S = save | CTRL + X or :wq = save & quit | line {cursorY + 1}/{lines.Count}";
+                        $"{mode} ESC = quit | CTRL + S = save | CTRL + X or :wq = save & quit | line {cursorY + 1}/{lines.Count}";
 
                     if (status.Length > winW)
                         status = status.Substring(0, winW);
@@ -1774,7 +2043,31 @@ namespace fis
                     if (key.Key == ConsoleKey.S &&
                         key.Modifiers.HasFlag(ConsoleModifiers.Control))
                     {
-                        File.WriteAllLines(path, lines);
+                        if (viewHex)
+                        {
+                            List<byte> outBytes = new List<byte>();
+
+                            foreach (string line in lines)
+                            {
+                                string[] hexes = line
+                                    .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                                foreach (string h in hexes)
+                                {
+                                    try
+                                    {
+                                        outBytes.Add(Convert.ToByte(h, 16));
+                                    }
+                                    catch { }
+                                }
+                            }
+
+                            File.WriteAllBytes(path, outBytes.ToArray());
+                        }
+                        else
+                        {
+                            File.WriteAllLines(path, lines);
+                        }
 
                         Console.SetCursorPosition(0, winH - 1);
                         Console.ForegroundColor = ConsoleColor.Cyan;
@@ -1792,7 +2085,31 @@ namespace fis
                     if (key.Key == ConsoleKey.X &&
                         key.Modifiers.HasFlag(ConsoleModifiers.Control))
                     {
-                        File.WriteAllLines(path, lines);
+                        if (viewHex)
+                        {
+                            List<byte> outBytes = new List<byte>();
+
+                            foreach (string line in lines)
+                            {
+                                string[] hexes = line
+                                    .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                                foreach (string h in hexes)
+                                {
+                                    try
+                                    {
+                                        outBytes.Add(Convert.ToByte(h, 16));
+                                    }
+                                    catch { }
+                                }
+                            }
+
+                            File.WriteAllBytes(path, outBytes.ToArray());
+                        }
+                        else
+                        {
+                            File.WriteAllLines(path, lines);
+                        }
 
                         Console.Clear();
                         Console.ForegroundColor = ConsoleColor.Cyan;
@@ -1809,7 +2126,31 @@ namespace fis
                         if (currentLine.Trim() == ":wq")
                         {
                             lines.RemoveAt(cursorY);
-                            File.WriteAllLines(path, lines);
+                            if (viewHex)
+                            {
+                                List<byte> outBytes = new List<byte>();
+
+                                foreach (string line in lines)
+                                {
+                                    string[] hexes = line
+                                        .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                                    foreach (string h in hexes)
+                                    {
+                                        try
+                                        {
+                                            outBytes.Add(Convert.ToByte(h, 16));
+                                        }
+                                        catch { }
+                                    }
+                                }
+
+                                File.WriteAllBytes(path, outBytes.ToArray());
+                            }
+                            else
+                            {
+                                File.WriteAllLines(path, lines);
+                            }
 
                             Console.Clear();
                             Console.ForegroundColor = ConsoleColor.Cyan;
@@ -1831,21 +2172,47 @@ namespace fis
                     // BACKSPACE
                     else if (key.Key == ConsoleKey.Backspace)
                     {
-                        if (cursorX > 0)
+                        if (viewHex)
                         {
+                            string[] hexes = lines[cursorY]
+                                .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                            int byteIndex = cursorX / 3;
+
+                            // clamp
+                            if (byteIndex >= 0 && byteIndex < hexes.Length)
+                            {
+                                hexes[byteIndex] = "00";
+                            }
+
+                            // rebuild clean formatting
                             lines[cursorY] =
-                                lines[cursorY].Remove(cursorX - 1, 1);
-                            cursorX--;
+                                string.Join(" ", hexes) + " ";
+
+                            // move cursor to start of deleted byte
+                            cursorX = byteIndex * 3;
+
+                            highNibble = true;
                         }
-                        else if (cursorY > 0)
+                        else
                         {
-                            int prevLen = lines[cursorY - 1].Length;
+                            if (cursorX > 0)
+                            {
+                                lines[cursorY] =
+                                    lines[cursorY].Remove(cursorX - 1, 1);
 
-                            lines[cursorY - 1] += lines[cursorY];
-                            lines.RemoveAt(cursorY);
+                                cursorX--;
+                            }
+                            else if (cursorY > 0)
+                            {
+                                int prevLen = lines[cursorY - 1].Length;
 
-                            cursorY--;
-                            cursorX = prevLen;
+                                lines[cursorY - 1] += lines[cursorY];
+                                lines.RemoveAt(cursorY);
+
+                                cursorY--;
+                                cursorX = prevLen;
+                            }
                         }
                     }
 
@@ -1884,7 +2251,36 @@ namespace fis
                     }
 
                     // TEXT INPUT
-                    else if (!char.IsControl(key.KeyChar))
+                    else if (viewHex && IsHexChar(key.KeyChar))
+                    {
+                        char hex = NormalizeHex(key.KeyChar);
+
+                        while (lines[cursorY].Length <= cursorX)
+                            lines[cursorY] += "00 ";
+
+                        char[] chars = lines[cursorY].ToCharArray();
+
+                        chars[cursorX] = hex;
+
+                        lines[cursorY] = new string(chars);
+
+                        if (highNibble)
+                        {
+                            highNibble = false;
+                            cursorX++;
+                        }
+                        else
+                        {
+                            highNibble = true;
+
+                            cursorX += 2;
+
+                            // auto extend line spacing
+                            if (cursorX > lines[cursorY].Length)
+                                lines[cursorY] += "00 ";
+                        }
+                    }
+                    else if (!viewHex && !char.IsControl(key.KeyChar))
                     {
                         lines[cursorY] =
                             lines[cursorY].Insert(cursorX, key.KeyChar.ToString());
@@ -1914,13 +2310,67 @@ namespace fis
         {
             try
             {
-                // search for keywords
-                if (args.Length >= 3 && args[1].ToLower() == "/search")
+                // user specified something
+                if (args.Length >= 2)
                 {
-                    string keyword = string.Join(" ", args.Skip(2));
+                    string input = string.Join(" ", args.Skip(1));
+
+                    // absolute or existing path = list folder
+                    if (Path.IsPathRooted(input) || Directory.Exists(input))
+                    {
+                        string targetDir = Path.GetFullPath(input);
+
+                        if (!Directory.Exists(targetDir))
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("folder doesnt exist lil bro");
+                            ResForegroundColor();
+                            return;
+                        }
+
+                        string[] dirs2 = Directory.GetDirectories(targetDir);
+                        string[] files2 = Directory.GetFiles(targetDir);
+
+                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        Console.WriteLine($"listing: {targetDir}\n");
+
+                        // dirs first
+                        foreach (string dir in dirs2)
+                        {
+                            string name = Path.GetFileName(dir);
+
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine($"[DIR]  {name}");
+                        }
+
+                        // files
+                        foreach (string file in files2)
+                        {
+                            string name = Path.GetFileName(file);
+
+                            long size = new FileInfo(file).Length;
+
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine($"[FILE] {name} ({size} bytes)");
+                        }
+
+                        // empty check
+                        if (dirs2.Length == 0 && files2.Length == 0)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("this folder empty as hell");
+                            Console.WriteLine("tf are u expecting me to do :sob:");
+                        }
+
+                        ResForegroundColor();
+                        return;
+                    }
+
+                    // otherwise search mode
+                    string keyword = input;
 
                     Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine($"searching keyword for '{keyword}' in: '{currentDir}'...\n");
+                    Console.WriteLine($"searching for '{keyword}' in: '{currentDir}'...\n");
 
                     int found = 0;
 
@@ -1931,8 +2381,12 @@ namespace fis
 
                         if (name.Contains(keyword, StringComparison.OrdinalIgnoreCase))
                         {
-                            Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine($"[DIR]  {dir}");
+                            Console.ForegroundColor = ConsoleColor.DarkGray;
+                            Console.Write("[DIR]  ");
+
+                            HighlightKeyword(dir, keyword);
+
+                            Console.WriteLine();
                             found++;
                         }
                     }
@@ -1946,8 +2400,15 @@ namespace fis
                         {
                             long size = new FileInfo(file).Length;
 
+                            Console.ForegroundColor = ConsoleColor.DarkGray;
+                            Console.Write("[FILE] ");
+
+                            HighlightKeyword(file, keyword);
+
                             Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine($"[FILE] {file} ({size} bytes)");
+                            Console.Write($" ({size} bytes)");
+
+                            Console.WriteLine();
                             found++;
                         }
                     }
@@ -1974,7 +2435,7 @@ namespace fis
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine($"listing: {currentDir}\n");
 
-                // list directories first
+                // dirs first
                 foreach (string dir in dirs)
                 {
                     string name = Path.GetFileName(dir);
@@ -1983,7 +2444,7 @@ namespace fis
                     Console.WriteLine($"[DIR]  {name}");
                 }
 
-                // then files
+                // files
                 foreach (string file in files)
                 {
                     string name = Path.GetFileName(file);
@@ -2014,6 +2475,39 @@ namespace fis
             }
 
             ResForegroundColor();
+        }
+
+        // highlight the keyword in dirs (helper void for ls(string[] args)
+        static void HighlightKeyword(string text, string keyword)
+        {
+            int start = 0;
+
+            while (true)
+            {
+                int index = text.IndexOf(keyword, start, StringComparison.OrdinalIgnoreCase);
+
+                // no more matches
+                if (index < 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.Write(text.Substring(start));
+                    break;
+                }
+
+                // text before keyword
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.Write(text.Substring(start, index - start));
+
+                // highlighted keyword
+                Console.ForegroundColor = ConsoleColor.Black;
+                Console.BackgroundColor = ConsoleColor.Yellow;
+
+                Console.Write(text.Substring(index, keyword.Length));
+
+                Console.ResetColor();
+
+                start = index + keyword.Length;
+            }
         }
 
         static void Cat(string[] args)
@@ -2512,7 +3006,7 @@ namespace fis
         static void ShowVersion()
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("fiscmd v1.6 beta ><>");
+            Console.WriteLine("fiscmd v1.7 beta ><>");
             /*
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine("(LETS GO FINAL V2 WE COOKED)");
@@ -2523,7 +3017,7 @@ namespace fis
             Console.WriteLine(".NET 6.0 LTS");
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.DarkYellow;
-            Console.WriteLine("pov: me when the");
+            Console.WriteLine("ooga booga");
             ResForegroundColor();
         }
 
@@ -2840,21 +3334,20 @@ namespace fis
         static void ShowUpdate()
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            TypeWrite("v1.6 beta logs (press any key for each next log ok):\n");
+            TypeWrite("v1.7 beta logs (press any key for each next log ok):\n");
             Console.ReadKey(true);
-            TypeWrite("- updated the importable command \"fisdraw\" (un/redo support + erase 1 pixel + save/load)");
+            TypeWrite("- updated command: \"ls\" (highlights keyword in dirs)");
             Console.ReadKey(true);
-            TypeWrite("- apoligized for confusing yall with \"fisuni\" in v1.5 :sob::wilted-flower:");
+            TypeWrite("- also updated command: \"touch\" (has /hex switch)");
             Console.ReadKey(true);
-            TypeWrite("- ", 10, false);
             Console.ForegroundColor = ConsoleColor.Red;
-            TypeWrite("completely rewrote fiscmd command input system", 10, false);
+            TypeWrite("- ", 10, false);
+            TypeWrite("completely rewrote fiscmd command input system (again)", 10, false);
             Console.ForegroundColor = ConsoleColor.Cyan;
-            TypeWrite("\nso now that the cursor can move around using arrow keys and ofc Home/End keys");
+            TypeWrite("\nso now that theres this AWESOME syntax highlighting u see in the first place :D");
             Console.ReadKey(true);
             Console.ForegroundColor = ConsoleColor.Yellow;
-            TypeWrite("- NEW COMMANDS: netwatch, diskparty (seek \"help\" for more brotha)");
-            TypeWrite("- NEW IMPORTABLE COMMAND: fisstars (seek \"import\" for more brotha)");
+            TypeWrite("- revived the old title for nostalgia from the early v0.99.85 beta version :D");
 
             Console.ReadKey(true);
             TypeWrite("- thats it lmao");
@@ -3237,13 +3730,13 @@ namespace fis
                     else
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("bros internet died :sob:");
+                        Console.WriteLine("bros internet died mid pinging :sob:");
                     }
                 }
                 catch
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("router exploded");
+                    Console.WriteLine("did bros router rlly exploded :skull:");
                 }
 
                 Thread.Sleep(1000);
