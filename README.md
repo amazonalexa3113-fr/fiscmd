@@ -1,5 +1,5 @@
 # fiscmd
-a simple console made by me (and ofc chatgpt 😭😭)
+the **first** ***ever*** chatgpt made simple console designed for optional entertainment
 
 this is the official github page of a simple goofy console named **fiscmd** :D
 
