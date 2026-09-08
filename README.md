@@ -1,5 +1,5 @@
 # fiscmd
-the **first** ***ever*** chatgpt made simple console designed for optional entertainment
+the **first** (not ever) chatgpt made simple console designed for optional entertainment
 
 this is the official github page of a simple goofy console named **fiscmd** :D
 
@@ -11,13 +11,7 @@ its fun go try it :D
 # FAQ
 whats fiscmd
 
-**a small simple console made by me (and ofc chatgpt 🙏🥀) with goofy miscs and dangerous file interaction console that u can use :D**
-
-what version is it currently
-
-**fiscmd v1 final ><>**
-
-*bcuz its in beta, u may expect some bugs, although they're rare ;-;**
+**a small simple console made by me (and ofc chatgpt) with goofy miscs and dangerous file interaction console that u can use :D**
 
 requirement??
 
@@ -25,11 +19,13 @@ requirement??
 
 would it always updates
 
-**ofc it will tf u expecting me to leave it abandoned or smth???**
+**not always as im busy updating my heloworlweb**
 
 where had u programmed ts
 
 **Microsoft Visual Studio Insiders 2026**
+
+and soon enough... **Visual Code Studio with proper extensions installed on linux** :D
 
 why .net 6.0 lts and not .net 8.0 lts
 
