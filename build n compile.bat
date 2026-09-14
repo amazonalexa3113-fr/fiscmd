@@ -36,5 +36,5 @@ if %errorlevel% neq 0 (
 echo.
 echo F I N I S H E D
 echo output should be in:
-echo bin\Release\net8.0-windows\win-x64\publish\
+echo bin\Release\net6.0\win-x64\publish\
 pause

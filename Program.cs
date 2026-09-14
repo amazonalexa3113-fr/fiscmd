@@ -1,4 +1,4 @@
-/*
+﻿/*
 
 ><>$ echo HAVE A HAVE A LOOK ONE POUND FIS
 
@@ -64,6 +64,9 @@ namespace fis
         // smth RedrawLine() would need
         static int inputStartTop;
 
+        // for storing alias history purposes
+        static Dictionary<string, string> aliases = new();
+
         // commands for tab autocomplete (well... NOT exactly real ><>$ autocom)
         static List<string> commands = new List<string>
         {
@@ -101,11 +104,120 @@ namespace fis
             "fisdraw","draw","fispaint",
             "netwatch",
             "diskparty","diskusages",
-            "fistars","fisstar","stars","star"
+            "fistars","fisstar","stars","star",
+            "alias"
         };
 
         static void Main(string[] args)
         {
+            string sonwhat = "fiscmd.exe";
+
+            if (OperatingSystem.IsLinux())
+                sonwhat = "./fiscmd";
+
+            // command-line arguments (NEW, added in 1.8 beta, it's HUGEE)
+            if (args.Length > 0)
+            {
+                switch (args[0].ToLower())
+                {
+                    case "-h":
+                    case "--help":
+                    case "/?":
+                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        Console.WriteLine("fiscmd - a silly little console app :D");
+                        Console.WriteLine();
+                        Console.WriteLine("usage:");
+                        Console.WriteLine($"{sonwhat}          open interactive shell");
+                        Console.WriteLine($"{sonwhat} -h (or --help) - show this help");
+                        Console.WriteLine($"{sonwhat} -v (or --version) - show the current version of ts");
+                        Console.WriteLine($"{sonwhat} -c (or --command) - execute any command fiscmd currently has");
+                        Console.WriteLine($"{sonwhat} -a (or --alias) - add an alias");
+                        Console.WriteLine($"honorable mention: \"{sonwhat} -q\" (or --quit) do nothing, in fact... this command is a ragebait :skull:");
+                        return;
+                    
+
+                    case "-c":
+                    case "--command":
+                        if (args.Length < 2)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("where command");
+                            return;
+                        }
+
+                        string[] commandArgs = args.Skip(1).ToArray();
+                        string commandInput = string.Join(" ", commandArgs);
+
+                        execcmd(commandArgs, commandInput);
+                        return;
+                    
+                    case "-v":
+                    case "--version":
+                        ShowVersion();
+                        return;
+                    
+                    case "-a":
+                    case "--alias":
+                        if (args.Length < 3)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Cyan;
+                            Console.WriteLine("usage: alias <name> <command>");
+                            return;
+                        }
+
+                        string aliasName = args[1];
+                        string aliasCommand = string.Join(" ", args.Skip(2));
+
+                        aliases[aliasName] = aliasCommand;
+                        
+                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        Console.WriteLine($"alias created: {aliasName} >> {aliasCommand} :D");
+                        return;
+                    
+                    /*
+                    oh this?
+                    forgr bout it ts uses cmd.exe or ur bash shell on linux
+                    we have a new version used to actually like mimics commands fiscmd has
+
+                    case "-c":
+                        if (args.Length < 2)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("where command");
+                            return;
+                        }
+
+                        string command = string.Join(" ", args.Skip(1));
+
+                        using (Process process = new Process())
+                        {
+                            process.StartInfo.FileName = OperatingSystem.IsWindows()
+                                ? "cmd.exe"
+                                : "/bin/sh";
+
+                            process.StartInfo.ArgumentList.Add(
+                                OperatingSystem.IsWindows() ? "/c" : "-c"
+                            );
+
+                            process.StartInfo.ArgumentList.Add(command);
+
+                            process.Start();
+                            process.WaitForExit();
+
+                            Environment.ExitCode = process.ExitCode;
+                        }
+
+                        return;
+                    */
+
+                    default:
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"unknown argument: {args[0]}");
+                        Console.WriteLine("use 'fiscmd.exe -h' for help");
+                        return;
+                }
+            }
+
             Console.CursorVisible = false;
 
             Console.Title = "have a look have a look one pound fis ><>";
@@ -177,297 +289,381 @@ namespace fis
 
                 // new ver:
                 string[] parts = ParseQuotedArgs(rawInput);
-                string command = parts[0].ToLower();
+                
+                if (execcmd(parts, rawInput))
+                    return;
+            }
+        }
 
-                switch (command)
-                {
-                    case "exit":
+        // slop everything any switch() has into here
+        static bool execcmd(string[] commandArgs, string rawInput)
+        {
+            if (commandArgs.Length == 0)
+                return false;
+
+            if (aliases.TryGetValue(commandArgs[0], out string alias))
+            {
+                string expandedCommand = alias;
+
+                if (commandArgs.Length > 1)
+                    expandedCommand += " " + string.Join(" ", commandArgs.Skip(1));
+
+                string[] expandedArgs = ParseQuotedArgs(expandedCommand);
+
+                return execcmd(expandedArgs, expandedCommand);
+            }
+
+            switch (commandArgs[0].ToLower())
+            {
+                case "exit":
                         Console.ForegroundColor = ConsoleColor.Cyan;
                         Console.WriteLine("tysm for using our console app :D");
                         Console.ForegroundColor = ConsoleColor.White;
                         Console.WriteLine("any key to exit sir ;-;");
                         Console.ReadKey(true);
                         Console.ResetColor(); // yk what i mean (who uses ResForegroundColor() upon exiting :skull:)
-                        return;
+                        return true;
 
-                    case "info":
-                    case "inf":
-                    case "i":
-                    case "about":
-                    case "abt":
-                    case "aboutthiscmd":
-                    case "aboutthisconsole":
-                    case "abtthisconsole":
-                    case "abtthiscmd": ShowInfo(); break;
+                case "info":
+                case "inf":
+                case "i":
+                case "about":
+                case "abt":
+                case "aboutthiscmd":
+                case "aboutthisconsole":
+                case "abtthisconsole":
+                case "abtthiscmd": ShowInfo(); break;
+                
+                case "help":
+                case "helpmepls":
+                case "/?":
+                case "?": ShowHelp(); break;
+
+                case "rng": RunRng(); break;
+
+                case "calc":
+                case "simplecalc": RunCalc(); break;
+
+                case "example":
+                case "ex":
+                case "eg": ShowExample(); break;
+
+                case "clear":
+                case "cls":
+                    Console.Clear();
+                    inputStartTop = 0;
+                    break;
+
+                case "time":
+                case "when":
+                case "watsthetime": ShowTime(); break;
+
+                case "fulltime": ShowFullTime(); break;
+
+                case "beep": RunBeep(commandArgs); break;
+
+                case "watchtime": WatchTime(); break;
+
+                case "crash": FakeCrash(); break;
+
+                case "requirement":
+                case "req":
+                case "rq":
+                case "require":
+                case "required":
+                    Console.ForegroundColor = ConsoleColor.DarkMagenta;
+                    Console.WriteLine(".NET 6.0 (long-term support)");
+                    ResForegroundColor();
+                    break;
+
+                case "currentos":
+                case "curos":
+                case "os": DetectOS(); break;
+
+                // file modifying functions
+                case "copy":
+                case "cop":
+                case "cope": Copy(commandArgs); break;
+
+                case "cp": 
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("what command are u tryna enter :pray::wilted-rose:");
+                    ResForegroundColor();
+                    break;
+
+                case "mkdir":
+                    Mkdir(commandArgs);
+                    break;
+
+                case "rmdir":
+                    Rmdir(commandArgs);
+                    break;
+
+                case "rm":
+                    Rm(commandArgs);
+                    break;
+
+                case "cd":
+                    Cd(commandArgs);
+                    break;
+
+                case "toggleShowDir":
+                case "toggleshowdir": toggleShowDir(); break;
+
+                case "touch":
+                    Touch(commandArgs);
+                    break;
+
+                case "ls":
+                case "dir":
+                    ls(commandArgs);
+                    break;
+
+                case "cat":
+                    Cat(commandArgs);
+                    break;
+
+                case "move":
+                case "mov":
+                case "mv": Move(commandArgs); break;
+
+                case "run":
+                case "open":
+                case "launch": RunCommand(commandArgs); break;
+
+
+                // goofy miscs
+                case "history":
+                case "his":
+                case "hist": ShowHistory(); break;
+
+                case "clearhistory":
+                case "clshistory":
+                case "clearhis":
+                case "clshis":
+                case "clearhist":
+                case "clshist": ClearHistory(); break;
+
+                case "showversion":
+                case "showver":
+                case "version":
+                case "ver":
+                case "v": ShowVersion(); break;
+
+                case "settitle":
+                case "title": 
+                    SetTitle(commandArgs);
+
+                    if (OperatingSystem.IsLinux()) {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine("honorable mention: giving ur terminal a custom title wouldn't work on some certain terminals if ur on linux, especially Konsole");
+                        ResForegroundColor();
+                    }
                     
-                    case "help":
-                    case "helpmepls":
-                    case "/?":
-                    case "?": ShowHelp(); break;
+                    break;
 
-                    case "rng": RunRng(); break;
+                case "printfis":
+                case "printfish":
+                case "prnfish":
+                case "prnfis":
+                case "prntfish":
+                case "prntfis": PrintFis(); break;
 
-                    case "calc":
-                    case "simplecalc": RunCalc(); break;
+                case "flipcoin":
+                case "flipacoin":
+                case "coin":
+                case "morecoins":
+                case "morecoin":
+                case "headntail":
+                case "headsntails":
+                case "headandtail":
+                case "headsandtails": FlipCoin(); break;
 
-                    case "example":
-                    case "ex":
-                    case "eg": ShowExample(); break;
+                case "tree": TreeCommand(commandArgs); break;
 
-                    case "clear":
-                    case "cls":
-                        Console.Clear();
-                        inputStartTop = 0;
+                case "systeminfo":
+                case "systeminf":
+                case "systemi":
+                case "sysinfo":
+                case "sysinf":
+                case "sysi": SysInfo(); break;
+
+                case "memoryinfo":
+                case "memoryinf":
+                case "memoryi":
+                case "meminfo":
+                case "meminf":
+                case "memi": MemInfo(); break;
+
+                case "benchmark":
+                case "bmark":
+                case "benchm": Benchmark(); break;
+
+                case "zip":
+                case "zipfolder":
+                case "zipfol": ZipFolder(commandArgs); break;
+
+                case "unzip":
+                case "unzipfile":
+                case "unzipfolder":
+                case "unzipfol": UnzipFile(commandArgs); break;
+
+                case "rename":
+                case "ren":
+                case "rn": Rename(commandArgs); break;
+
+                case "hash":
+                case "sha256": HashFile(commandArgs); break;
+
+                case "whoami":
+                case "%userprofile%": ShowUser(); break;
+
+                case "echo":
+                    Console.ResetColor();
+                    DoEcho(rawInput);
+                    ResForegroundColor();
+                    break;
+
+                case "showupdates":
+                case "showupdate":
+                case "showlogs":
+                case "showlog":
+                case "updates":
+                case "update":
+                case "logs":
+                case "log": ShowUpdate(); break;
+
+                case "sudo": 
+                    Console.WriteLine("nice try :skull:"); break; // sudo joke
+
+                case "initializefis":
+                case "initfis":
+                    PrintFisCoolAsf(true, 25, false);
+                    TypeWrite(" fiscmd initialized, welcome :D", 25, false);
+                    ResForegroundColor();
+                    Console.WriteLine();
+                    break;
+
+                case "netwatch": NetWatch(); break;
+
+                case "diskparty": DiskParty(); break;
+
+                case "alias":
+                case "aliases":
+                    // no arguments = list aliases
+                    if (commandArgs.Length == 1)
+                    {
+                        if (aliases.Count == 0)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("no aliases");
+                            break;
+                        }
+
+                        foreach (var entry in aliases)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Cyan;
+                            Console.WriteLine($"{entry.Key} >> {entry.Value}, gotcha");
+                        }
+
                         break;
+                    }
 
-                    case "time":
-                    case "when":
-                    case "watsthetime": ShowTime(); break;
+                    // one argument = show that alias
+                    if (commandArgs.Length == 2)
+                    {
+                        string aliasName = commandArgs[1];
 
-                    case "fulltime": ShowFullTime(); break;
-
-                    case "beep": RunBeep(parts); break;
-
-                    case "watchtime": WatchTime(); break;
-
-                    case "crash": FakeCrash(); break;
-
-                    case "requirement":
-                    case "req":
-                    case "rq":
-                    case "require":
-                    case "required":
-                        Console.ForegroundColor = ConsoleColor.DarkMagenta;
-                        Console.WriteLine(".NET 6.0 (long-term support)");
-                        ResForegroundColor();
-                        break;
-
-                    case "currentos":
-                    case "curos":
-                    case "os": DetectOS(); break;
-
-                    // file modifying functions
-                    case "copy":
-                    case "cop":
-                    case "cope": Copy(parts); break;
-
-                    case "cp": 
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("what command are u tryna enter :pray::wilted-rose:");
-                        ResForegroundColor();
-                        break;
-
-                    case "mkdir":
-                        Mkdir(parts);
-                        break;
-
-                    case "rmdir":
-                        Rmdir(parts);
-                        break;
-
-                    case "rm":
-                        Rm(parts);
-                        break;
-
-                    case "cd":
-                        Cd(parts);
-                        break;
-
-                    case "toggleShowDir":
-                    case "toggleshowdir": toggleShowDir(); break;
-
-                    case "touch":
-                        Touch(parts);
-                        break;
-
-                    case "ls":
-                    case "dir":
-                        ls(parts);
-                        break;
-
-                    case "cat":
-                        Cat(parts);
-                        break;
-
-                    case "move":
-                    case "mov":
-                    case "mv": Move(parts); break;
-
-                    case "run":
-                    case "open":
-                    case "launch": RunCommand(parts); break;
-
-
-                    // goofy miscs
-                    case "history":
-                    case "his":
-                    case "hist": ShowHistory(); break;
-
-                    case "clearhistory":
-                    case "clshistory":
-                    case "clearhis":
-                    case "clshis":
-                    case "clearhist":
-                    case "clshist": ClearHistory(); break;
-
-                    case "showversion":
-                    case "showver":
-                    case "version":
-                    case "ver":
-                    case "v": ShowVersion(); break;
-
-                    case "settitle":
-                    case "title": SetTitle(parts); break;
-
-                    case "printfis":
-                    case "printfish":
-                    case "prnfish":
-                    case "prnfis":
-                    case "prntfish":
-                    case "prntfis": PrintFis(); break;
-
-                    case "flipcoin":
-                    case "flipacoin":
-                    case "coin":
-                    case "morecoins":
-                    case "morecoin":
-                    case "headntail":
-                    case "headsntails":
-                    case "headandtail":
-                    case "headsandtails": FlipCoin(); break;
-
-                    case "tree": TreeCommand(parts); break;
-
-                    case "systeminfo":
-                    case "systeminf":
-                    case "systemi":
-                    case "sysinfo":
-                    case "sysinf":
-                    case "sysi": SysInfo(); break;
-
-                    case "memoryinfo":
-                    case "memoryinf":
-                    case "memoryi":
-                    case "meminfo":
-                    case "meminf":
-                    case "memi": MemInfo(); break;
-
-                    case "benchmark":
-                    case "bmark":
-                    case "benchm": Benchmark(); break;
-
-                    case "zip":
-                    case "zipfolder":
-                    case "zipfol": ZipFolder(parts); break;
-
-                    case "unzip":
-                    case "unzipfile":
-                    case "unzipfolder":
-                    case "unzipfol": UnzipFile(parts); break;
-
-                    case "rename":
-                    case "ren":
-                    case "rn": Rename(parts); break;
-
-                    case "hash":
-                    case "sha256": HashFile(parts); break;
-
-                    case "whoami":
-                    case "%userprofile%": ShowUser(); break;
-
-                    case "echo":
-                        Console.ResetColor();
-                        DoEcho(rawInput);
-                        ResForegroundColor();
-                        break;
-
-                    case "showupdates":
-                    case "showupdate":
-                    case "showlogs":
-                    case "showlog":
-                    case "updates":
-                    case "update":
-                    case "logs":
-                    case "log": ShowUpdate(); break;
-
-                    case "sudo": Console.WriteLine("nice try :skull:"); break; // sudo joke
-
-                    case "initializefis":
-                    case "initfis":
-                        PrintFisCoolAsf(true, 25, false);
-                        TypeWrite(" fiscmd initialized, welcome :D", 25, false);
-                        ResForegroundColor();
-                        Console.WriteLine();
-                        break;
-
-                    case "netwatch": NetWatch(); break;
-
-                    case "diskparty": DiskParty(); break;
-
-                    // importable command
-                    case "importcmd":
-                    case "import":
-                        ImportCmd(parts);
-                        break;
-
-                    case "fissnake":
-                    case "snake":
-                        bool ye2 = WarnNotImported(importedFissnake);
-                        if (ye2) break;
-
-                        Snake(parts);
-                        break;
-
-                    case "fisscript":
-                    case "scriptfile":
-                    case "script":
-                    case "scr":
-                        bool ye3 = WarnNotImported(importedFisscript);
-                        if (ye3) break;
-
-                        FisScript(parts);
-                        break;
-
-                    case "fisdraw":
-                    case "draw":
-                    case "fispaint": // joke name grabbed from "mspaint"
-                        bool ye4 = WarnNotImported(importedFisdraw);
-                        if (ye4) break;
-
-                        FisDraw(parts);
-                        break;
-
-                    case "fisstar":
-                    case "fisstars":
-                    case "star":
-                    case "stars":
-                        bool ye6 = WarnNotImported(importedStars);
-                        if (ye6) break;
-
-                        Stars();
-                        break;
-
-                    // unimportable command that used to be importable back then
-
-                    case "top":
-                    case "fistop":
-                    case "taskmgr": Taskmgr(parts); break;
-
-                    case "kill":
-                    case "fiskill":
-                    case "killproc": KillProc(parts); break;
-
-                    default:
-                        if (parts[0] == "color") SetColor(input);
+                        if (aliases.TryGetValue(aliasName, out string aliasCommand))
+                        {
+                            Console.ForegroundColor = ConsoleColor.Cyan;
+                            Console.WriteLine($"{aliasName} >> {aliasCommand}, gotcha");
+                        }
                         else
                         {
                             Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine("ts is barely even a command");
-                            ResForegroundColor();
+                            Console.WriteLine($"alias '{aliasName}' not found");
                         }
+
                         break;
-                }
+                    }
+
+                    // two+ arguments = create/update alias
+                    string newAliasName = commandArgs[1];
+                    string newAliasCommand = string.Join(" ", commandArgs.Skip(2));
+
+                    aliases[newAliasName] = newAliasCommand;
+
+                    Console.WriteLine($"alias created: {newAliasName} -> {newAliasCommand}");
+                    break;
+
+                // importable command
+                case "importcmd":
+                case "import":
+                    ImportCmd(commandArgs);
+                    break;
+
+                case "fissnake":
+                case "snake":
+                    bool ye2 = WarnNotImported(importedFissnake);
+                    if (ye2) break;
+
+                    Snake(commandArgs);
+                    break;
+
+                case "fisscript":
+                case "scriptfile":
+                case "script":
+                case "scr":
+                    bool ye3 = WarnNotImported(importedFisscript);
+                    if (ye3) break;
+
+                    FisScript(commandArgs);
+                    break;
+
+                case "fisdraw":
+                case "draw":
+                case "fispaint": // joke name grabbed from "mspaint"
+                    bool ye4 = WarnNotImported(importedFisdraw);
+                    if (ye4) break;
+
+                    FisDraw(commandArgs);
+                    break;
+
+                case "fisstar":
+                case "fisstars":
+                case "star":
+                case "stars":
+                    bool ye6 = WarnNotImported(importedStars);
+                    if (ye6) break;
+
+                    Stars();
+                    break;
+
+                // unimportable command that used to be importable back then
+
+                case "top":
+                case "fistop":
+                case "taskmgr": Taskmgr(commandArgs); break;
+
+                case "kill":
+                case "fiskill":
+                case "killproc": KillProc(commandArgs); break;
+
+                case "#": break; // ragebait command
+
+                default:
+                    if (commandArgs[0] == "color") SetColor(rawInput);
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("ts is barely even a command");
+                        ResForegroundColor();
+                    }
+                    break;
             }
+
+            return false;
         }
 
         // let the file interaction voids SUPPORT SPACES IN FILES' NAMES NOW
@@ -711,10 +907,10 @@ namespace fis
                 }
                 catch
                 {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine("detected a linux user :0");
-                    Console.WriteLine("attempting to beep in a different way...");
-                    Console.Write("\a");
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("failed to beep: ur on linux");
+                    ResForegroundColor();
+                    return;
                 }
             }
             finally
@@ -811,6 +1007,10 @@ namespace fis
             List<char> buffer = new();
             int cursor = 0;
 
+            string tabPrefix = "";
+            List<string> tabMatches = new();
+            int tabIndex = -1;
+
             inputStartTop = Console.CursorTop;
 
             Console.ForegroundColor = currentFg;
@@ -876,6 +1076,10 @@ namespace fis
                 {
                     if (cursor > 0)
                     {
+                        tabPrefix = "";
+                        tabMatches.Clear();
+                        tabIndex = -1;
+
                         buffer.RemoveAt(cursor - 1);
                         cursor--;
 
@@ -888,6 +1092,10 @@ namespace fis
                 {
                     if (cursor < buffer.Count)
                     {
+                        tabPrefix = "";
+                        tabMatches.Clear();
+                        tabIndex = -1;
+
                         buffer.RemoveAt(cursor);
 
                         RedrawLine(buffer, cursor);
@@ -947,6 +1155,12 @@ namespace fis
                 }
                 */
 
+                // [TAB] directory/file autocomplete
+                else if (key.Key == ConsoleKey.Tab)
+                {
+                    TabComplete(ref buffer, ref cursor, ref tabPrefix, ref tabMatches, ref tabIndex);
+                }
+
                 // [CTRL] + [L] cls logic
                 else if (key.Modifiers.HasFlag(ConsoleModifiers.Control) && key.Key == ConsoleKey.L)
                 {
@@ -962,12 +1176,133 @@ namespace fis
                 // idk what is ts
                 else if (!char.IsControl(key.KeyChar))
                 {
+                    tabPrefix = "";
+                    tabMatches.Clear();
+                    tabIndex = -1;
+
                     buffer.Insert(cursor, key.KeyChar);
                     cursor++;
 
                     RedrawLine(buffer, cursor);
                 }
             }
+        }
+
+        // tab completion helper void for ReadCommand()
+        static void TabComplete(
+            ref List<char> buffer,
+            ref int cursor,
+            ref string tabPrefix,
+            ref List<string> tabMatches,
+            ref int tabIndex)
+        {
+            string input = new string(buffer.ToArray());
+
+            // Only autocomplete the text BEFORE the cursor
+            string beforeCursor = input.Substring(0, cursor);
+
+            // Find the beginning of the current argument
+            int argStart = beforeCursor.LastIndexOf(' ') + 1;
+
+            string typed = beforeCursor.Substring(argStart);
+
+            // Don't autocomplete empty command itself
+            if (argStart == 0 && !typed.Contains("/") && !typed.Contains("\\"))
+                return;
+
+            // If this is a new Tab cycle, find matches
+            if (tabPrefix != typed || tabMatches.Count == 0)
+            {
+                tabPrefix = typed;
+                tabIndex = -1;
+
+                string searchPath = typed;
+
+                // Remove quotes temporarily
+                searchPath = searchPath.Trim('"');
+
+                string directory;
+                string prefix;
+
+                if (Path.IsPathRooted(searchPath))
+                {
+                    directory = Path.GetDirectoryName(searchPath);
+                    prefix = Path.GetFileName(searchPath);
+                }
+                else
+                {
+                    string combined = Path.Combine(currentDir, searchPath);
+
+                    if (Directory.Exists(combined))
+                    {
+                        directory = combined;
+                        prefix = "";
+                    }
+                    else
+                    {
+                        directory = Path.GetDirectoryName(combined);
+                        prefix = Path.GetFileName(combined);
+                    }
+                }
+
+                if (string.IsNullOrEmpty(directory))
+                    directory = currentDir;
+
+                if (!Directory.Exists(directory))
+                    return;
+
+                try
+                {
+                    tabMatches = Directory
+                        .GetFileSystemEntries(directory)
+                        .Where(path =>
+                            Path.GetFileName(path)
+                                .StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                        .OrderBy(path => Path.GetFileName(path))
+                        .ToList();
+                }
+                catch
+                {
+                    tabMatches.Clear();
+                }
+            }
+
+            if (tabMatches.Count == 0)
+                return;
+
+            // Cycle to next match
+            tabIndex = (tabIndex + 1) % tabMatches.Count;
+
+            string selected = tabMatches[tabIndex];
+            string selectedName = Path.GetFileName(selected);
+
+            // Keep directory prefix if one was typed
+            string replacement;
+
+            string typedWithoutQuotes = typed.Trim('"');
+
+            string typedDirectory = Path.GetDirectoryName(typedWithoutQuotes);
+
+            if (!string.IsNullOrEmpty(typedDirectory))
+                replacement = Path.Combine(typedDirectory, selectedName);
+            else
+                replacement = selectedName;
+
+            // Add trailing separator when selected item is a directory
+            if (Directory.Exists(selected))
+                replacement += Path.DirectorySeparatorChar;
+
+            // Preserve quotes if the user started with one
+            if (typed.StartsWith("\""))
+                replacement = "\"" + replacement.TrimEnd(Path.DirectorySeparatorChar) + "\"";
+
+            // Replace current argument
+            buffer.RemoveRange(argStart, cursor - argStart);
+            buffer.InsertRange(argStart, replacement);
+
+            cursor = argStart + replacement.Length;
+
+            RedrawLine(buffer, cursor);
         }
 
         // RedrawLine helper void for ReadCommand void
@@ -3006,7 +3341,7 @@ namespace fis
         static void ShowVersion()
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("fiscmd v1.7 beta ><>");
+            Console.WriteLine("fiscmd v1.8 beta ><>");
             /*
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine("(LETS GO FINAL V2 WE COOKED)");
@@ -3334,31 +3669,30 @@ namespace fis
         static void ShowUpdate()
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            TypeWrite("v1.7 beta logs (press any key for each next log ok):\n");
+            TypeWrite("v1.8 beta logs (press any key for each next log ok):\n");
             Console.ReadKey(true);
-            TypeWrite("- updated command: \"ls\" (highlights keyword in dirs)");
-            Console.ReadKey(true);
-            TypeWrite("- also updated command: \"touch\" (has /hex switch)");
+            TypeWrite("- gave the [TAB] key a unique directory/file autocorrection :D");
             Console.ReadKey(true);
             Console.ForegroundColor = ConsoleColor.Red;
-            TypeWrite("- ", 10, false);
-            TypeWrite("completely rewrote fiscmd command input system (again)", 10, false);
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            TypeWrite("\nso now that theres this AWESOME syntax highlighting u see in the first place :D");
-            Console.ReadKey(true);
+            TypeWrite("- the \"beep\" command no longer works on linux :c");
             Console.ForegroundColor = ConsoleColor.Yellow;
-            TypeWrite("- revived the old title for nostalgia from the early v0.99.85 beta version :D");
+            Console.ReadKey(true);
+            TypeWrite("- added linux support so now u dont have to use wine or winetricks ever again :D");
+            Console.ReadKey(true);
+            TypeWrite("- added command-line argument :D (fiscmd.exe --help)");
+            Console.ReadKey(true);
+            TypeWrite("- ts version gon be HUGE");
 
             Console.ReadKey(true);
             TypeWrite("- thats it lmao");
             Console.ReadKey(true);
             Console.ForegroundColor = ConsoleColor.Blue;
             TypeWrite("\nfor more logs, https://discord.gg/C4g2RgYr2g");
-            TypeWrite("visit the same website now?? (default when pressing [ENTER] = no)");
+            TypeWrite("visit the same website now?? (y/N)");
             if (showDir)
             {
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.Write("><[answer]> ");
+                Console.Write("><[answer default: no]> ");
             }
             else
             {
