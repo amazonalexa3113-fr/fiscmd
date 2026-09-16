@@ -7,7 +7,7 @@
     <!-- app icon -->
     <ApplicationIcon>fis.ico</ApplicationIcon>
 
-    <!-- important part for compiling the app -->
+    <!-- THIS is the important part -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
