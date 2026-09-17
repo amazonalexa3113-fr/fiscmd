@@ -19,19 +19,16 @@ more than 6 thousand worth of lines :sob::pray: (honorable mention: all made by 
 
 */
 
-using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
+using System.Net.NetworkInformation;
 // parse quotes helper (to let file interaction functions handles spacing in files' name)
 using System.Text.RegularExpressions;
-using System.Net.NetworkInformation;
+using System.Threading;
 
 namespace fis
 {
@@ -105,11 +102,20 @@ namespace fis
             "netwatch",
             "diskparty","diskusages",
             "fistars","fisstar","stars","star",
-            "alias"
+            "alias",
+            "initfis", "initializefis"
         };
 
         static void Main(string[] args)
         {
+            Console.CancelKeyPress += (sender, e) =>
+            {
+                e.Cancel = true;
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("\n[CTRL] + [C] hit, press enter to continue...");
+                ResForegroundColor();
+            };
+
             string sonwhat = "fiscmd.exe";
 
             if (OperatingSystem.IsLinux())
@@ -172,6 +178,11 @@ namespace fis
                         
                         Console.ForegroundColor = ConsoleColor.Cyan;
                         Console.WriteLine($"alias created: {aliasName} >> {aliasCommand} :D");
+                        return;
+
+                    case "-q":
+                    case "--quit":
+                    case "--exit":
                         return;
                     
                     /*
@@ -1313,7 +1324,7 @@ namespace fis
 
             int top = inputStartTop;
 
-            string prompt = $"><[{currentDir}]>$ ";
+            string prompt = ReturnPrompt();
             string input = new string(buffer.ToArray());
 
             // calculate how many rows the input occupies
@@ -1344,7 +1355,7 @@ namespace fis
             Console.ForegroundColor = currentFg;
             Console.BackgroundColor = currentBg;
 
-            Console.Write("><[" + currentDir + "]>$ ");
+            Console.Write(ReturnPrompt());
 
             // restore immediately
             Console.ForegroundColor = prevFg;
@@ -2131,51 +2142,32 @@ namespace fis
             }
         }
 
+        static string ReturnPrompt()
+        {
+            if (!Directory.Exists(currentDir) || !showDir)
+                return "><>$ ";
+
+            string normalized = Path.GetFullPath(currentDir).TrimEnd('\\');
+
+            if (normalized.Equals("C:", StringComparison.OrdinalIgnoreCase) || normalized.Equals("/", StringComparison.OrdinalIgnoreCase))
+                return "><[main os partition]>$ ";
+            if (normalized.Equals("C:\\Windows", StringComparison.OrdinalIgnoreCase))
+                return "><[important windows folder]>$ ";
+            if (normalized.Equals("C:\\Windows\\System32", StringComparison.OrdinalIgnoreCase))
+                return "><[important admin folder]>$ ";
+            if (normalized.Equals("/root", StringComparison.OrdinalIgnoreCase))
+                return "><[important root folder]";
+            if (normalized.Equals($"C:\\Users\\{Environment.UserName}", StringComparison.OrdinalIgnoreCase) || normalized.Equals($"/home/{Environment.UserName}", StringComparison.OrdinalIgnoreCase))
+                return $"><[ur user folder, {Environment.UserName}]>$ ";
+            if (normalized.Equals("C:\\Users", StringComparison.OrdinalIgnoreCase) || normalized.Equals("/home", StringComparison.OrdinalIgnoreCase))
+                return "><[user folder]>$ ";
+
+            return $"><[{normalized}]>$ ";
+        }
+
         static void PrintPrompt()
         {
-            if (Directory.Exists(currentDir) && showDir)
-            {
-                string normalized = Path.GetFullPath(currentDir).TrimEnd('\\');
-
-                if (normalized.Equals("C:", StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.Write("><[main os partition]>$ ");
-                }
-                else if (normalized.Equals("C:\\Windows", StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.Write("><[important windows folder]>$ ");
-                }
-                else if (normalized.Equals("C:\\Windows\\System32", StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.Write("><[important admin folder]>$ ");
-                }
-                /*
-                else if (normalized.EndsWith("win-x64", StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.Write("><[repos release win-x64 folder]>$ ");
-                }
-                */
-                else if (normalized.EndsWith("repos", StringComparison.OrdinalIgnoreCase) || normalized.EndsWith("repo", StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.Write("><[a repos folder]>$ ");
-                }
-                else if (normalized.Equals($"C:\\Users\\{Environment.UserName}", StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.Write($"><[ur user folder, {Environment.UserName}]>$ ");
-                }
-                else if (normalized.Equals("C:\\Users", StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.Write("><[user folder]>$ ");
-                }
-                else
-                {
-                    Console.Write($"><[{normalized}]>$ ");
-                }
-            }
-            else
-            {
-                Console.Write("><>$ ");
-            }
+            Console.Write($"{ReturnPrompt()}");
         }
 
         static void toggleShowDir()
@@ -3197,25 +3189,57 @@ namespace fis
                     Console.ForegroundColor = ConsoleColor.Cyan;
                     Console.WriteLine("usage: run/open/launch [args] <file>");
                     Console.WriteLine("u can replace [args] with:");
-                    Console.WriteLine("/system32 (or /sys32) - run files only from system32");
-                    Console.WriteLine("/website - launches webpage/website instead of files");
+                    Console.WriteLine("/website or /web - launches webpage/website instead of files");
+                    Console.Write("/sudo or /su - launches the file as ");
+
+                    if (OperatingSystem.IsLinux())
+                    {
+                        Console.WriteLine("root");
+                    }
+                    else
+                    {
+                        Console.WriteLine("an administrator");
+                    }
+
                     Console.WriteLine("or leave empty to run files normally");
+                    ResForegroundColor();
                     return;
                 }
 
-                // WEBSITE MODE
-                if (args[1].ToLower() == "/website")
+                bool useSudo = false;
+                int targetIndex = 1;
+
+                // SUDO MODE
+                if (args[1].ToLower() == "/sudo" || args[1].ToLower() == "/su")
                 {
+                    useSudo = true;
+                    targetIndex = 2;
+
                     if (args.Length < 3)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("u forgot the file bro");
+                        ResForegroundColor();
+                        return;
+                    }
+                }
+
+                // WEBSITE MODE
+                if (args[targetIndex].ToLower() == "/website" ||
+                    args[targetIndex].ToLower() == "/web")
+                {
+                    if (args.Length <= targetIndex + 1)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
                         Console.WriteLine("u forgot the website link bro");
+                        ResForegroundColor();
                         return;
                     }
 
-                    string website = args[2];
+                    string website = args[targetIndex + 1];
 
-                    if (!website.StartsWith("http://") && !website.StartsWith("https://"))
+                    if (!website.StartsWith("http://") &&
+                        !website.StartsWith("https://"))
                     {
                         Console.ForegroundColor = ConsoleColor.Cyan;
                         Console.WriteLine("u forgr the https:// thing brah");
@@ -3237,67 +3261,83 @@ namespace fis
 
                     Console.ForegroundColor = ConsoleColor.Cyan;
                     Console.WriteLine("website opened successfully :D");
+                    ResForegroundColor();
                     return;
                 }
 
-                string target = "";
+                // GET TARGET
+                string target = args[targetIndex];
 
-                // SYS32 MODE
-                if (args[1].ToLower() == "/sys32" || args[1].ToLower() == "/system32")
+                if (!Path.IsPathRooted(target))
                 {
-                    if (args.Length < 3)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("u forgot app name bro");
-                        return;
-                    }
-
-                    string appName = args[2];
-
-
-                    // auto add .exe if no extension
-                    if (Path.GetExtension(appName) == "")
-                    {
-                        Console.ForegroundColor = ConsoleColor.Cyan;
-                        Console.WriteLine("u forgr the .exe thing brah");
-                        Console.WriteLine("press enter or y to auto add");
-
-                        string confirm1 = Console.ReadLine()?.ToLower() ?? "n";
-
-                        if (confirm1 == "" || confirm1 == "y")
-                        {
-                            appName += ".exe";
-                        }
-                    }
-
-                    target = Path.Combine(sys32fol, appName);
-                }
-                else
-                {
-                    // NORMAL MODE
-                    target = args[1];
-
-                    if (!Path.IsPathRooted(target))
-                    {
-                        target = Path.Combine(currentDir, target);
-                    }
+                    target = Path.Combine(currentDir, target);
                 }
 
                 if (!File.Exists(target))
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("file not found/invalid :c");
+                    ResForegroundColor();
                     return;
                 }
 
-                Process.Start(new ProcessStartInfo()
+                // LAUNCH
+                if (useSudo)
                 {
-                    FileName = target,
-                    UseShellExecute = true
-                });
+                    if (OperatingSystem.IsLinux())
+                    {
+                        // Linux: launch as root
+                        Process.Start(new ProcessStartInfo()
+                        {
+                            FileName = "sudo",
+                            UseShellExecute = false,
+                            ArgumentList =
+                            {
+                                target
+                            }
+                        });
+                    }
+                    else if (OperatingSystem.IsWindows())
+                    {
+                        // Windows: launch as administrator
+                        Process.Start(new ProcessStartInfo()
+                        {
+                            FileName = target,
+                            UseShellExecute = true,
+                            Verb = "runas"
+                        });
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("sudo/admin mode isn't supported on this OS :c");
+                        ResForegroundColor();
+                        return;
+                    }
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("launched successfully :D");
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+
+                    if (OperatingSystem.IsLinux())
+                    {
+                        Console.WriteLine("launched as root successfully :D");
+                    }
+                    else
+                    {
+                        Console.WriteLine("launched as administrator successfully :D");
+                    }
+                }
+                else
+                {
+                    // Normal mode
+                    Process.Start(new ProcessStartInfo()
+                    {
+                        FileName = target,
+                        UseShellExecute = true
+                    });
+
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine("launched successfully :D");
+                }
             }
             catch (Exception ex)
             {
@@ -3341,7 +3381,7 @@ namespace fis
         static void ShowVersion()
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("fiscmd v1.8 beta ><>");
+            Console.WriteLine("fiscmd v1.9 beta ><>");
             /*
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine("(LETS GO FINAL V2 WE COOKED)");
