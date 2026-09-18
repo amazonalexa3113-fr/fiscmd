@@ -67,7 +67,7 @@ namespace fis
         // commands for tab autocomplete (well... NOT exactly real ><>$ autocom)
         static List<string> commands = new List<string>
         {
-            "exit","info","inf","i","aboutthiscmd",
+            "exit", "quit","info","inf","i","aboutthiscmd",
             "aboutthisconsole","abtthiscmd","abtthisconsole",
             "help","helpmepls","/?","?",
             "rng","calc","simplecalc",
@@ -108,12 +108,10 @@ namespace fis
 
         static void Main(string[] args)
         {
+            // preventing [CTRL] + C (SIGINT) termination
             Console.CancelKeyPress += (sender, e) =>
             {
                 e.Cancel = true;
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("\n[CTRL] + [C] hit, press enter to continue...");
-                ResForegroundColor();
             };
 
             string sonwhat = "fiscmd.exe";
@@ -327,6 +325,7 @@ namespace fis
             switch (commandArgs[0].ToLower())
             {
                 case "exit":
+                case "quit":
                         Console.ForegroundColor = ConsoleColor.Cyan;
                         Console.WriteLine("tysm for using our console app :D");
                         Console.ForegroundColor = ConsoleColor.White;
@@ -1712,12 +1711,17 @@ namespace fis
             Console.WriteLine("view a files/sources has (sha-256) -  hash / sha256");
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Cyan;
+
+            // commands that no one asked for
             Console.WriteLine("commands that no one asked for");
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("show current directory (><[current dir]>$ ) - toggleShowDir (or lowercase: toggleshowdir)");
             Console.WriteLine("flip coin - coin / morecoins / flipcoin / flipacoin / headsntails / (more in tab autocorrect)");
             Console.WriteLine("show the \"fiscmd initialized...\" message earlier - initializefis / initfis");
+            Console.WriteLine("\"exit\" command but translated ragebaitly (NEW) - quit");
             Console.WriteLine();
+
+            // import command
             Console.WriteLine("NEW COMMAND - import / importcmd\nit is said that bro can actually import SPECIAL commands :0");
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("how to use: import <specialcmd>");
@@ -3709,19 +3713,11 @@ namespace fis
         static void ShowUpdate()
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            TypeWrite("v1.8 beta logs (press any key for each next log ok):\n");
+            TypeWrite("v1.9 beta logs (press any key for each next log ok):\n");
             Console.ReadKey(true);
-            TypeWrite("- gave the [TAB] key a unique directory/file autocorrection :D");
+            TypeWrite("- if ur on linux (or windows with ctrl + shift + c enabled as copying method) pressing ctrl + c wouldn't kill myself");
             Console.ReadKey(true);
-            Console.ForegroundColor = ConsoleColor.Red;
-            TypeWrite("- the \"beep\" command no longer works on linux :c");
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.ReadKey(true);
-            TypeWrite("- added linux support so now u dont have to use wine or winetricks ever again :D");
-            Console.ReadKey(true);
-            TypeWrite("- added command-line argument :D (fiscmd.exe --help)");
-            Console.ReadKey(true);
-            TypeWrite("- ts version gon be HUGE");
+            TypeWrite("- added a ragebait command: quit");
 
             Console.ReadKey(true);
             TypeWrite("- thats it lmao");
