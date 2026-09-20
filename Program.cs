@@ -4127,43 +4127,108 @@ namespace fis
             ResForegroundColor();
         }
 
-        // diskparty (shows disk usages)
+        // diskparty (shows physical disks)
         static void DiskParty()
         {
-            DriveInfo[] drives = DriveInfo.GetDrives();
-            
-            foreach (DriveInfo d in drives)
+            if (OperatingSystem.IsLinux()) // linux /dev/sda /dev/sdb...
             {
-                try
+                string[] disks = Directory.GetDirectories("/sys/block");
+
+                foreach (string diskPath in disks)
                 {
-                    if (!d.IsReady)
+                    string diskName = Path.GetFileName(diskPath);
+
+                    // Only show /dev/sdX
+                    if (!IsWholeDisk(diskName))
                         continue;
 
-                    long total = d.TotalSize;
-                    long free = d.TotalFreeSpace;
-                    long used = total - free;
+                    string device = $"/dev/{diskName}";
 
-                    int percent = (int)((used * 100) / total);
-                    int bars = percent / 10;
-
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.Write($"{d.Name} [");
-
-                    for (int i = 0; i < 10; i++)
+                    try
                     {
-                        Console.Write(i < bars ? "#" : "-");
-                    }
+                        string sizePath = Path.Combine(diskPath, "size");
+                        long sectors = long.Parse(File.ReadAllText(sizePath).Trim());
 
-                    Console.WriteLine($"] {percent}%");
+                        // Linux reports disk size in 512-byte sectors
+                        long totalBytes = sectors * 512;
+
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"{device} [{FormatBytes(totalBytes)}]");
+                    }
+                    catch
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"failed to read {device}");
+                    }
                 }
-                catch
+            }
+            else if (OperatingSystem.IsWindows()) // windows C:, F:...
+            {
+                DriveInfo[] drives = DriveInfo.GetDrives();
+
+                foreach (DriveInfo d in drives)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"failed to read {d.Name}");
+                    try
+                    {
+                        if (!d.IsReady)
+                            continue;
+
+                        long total = d.TotalSize;
+
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"{d.Name} [{FormatBytes(total)}]");
+                    }
+                    catch
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"failed to read {d.Name}");
+                    }
                 }
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("diskparty is unsupported on this operating system.");
             }
 
             ResForegroundColor();
+        }
+
+        // helper void for DiskParty()
+        static string FormatBytes(long bytes)
+        {
+            if (bytes >= 1024L * 1024 * 1024 * 1024)
+                return $"{bytes / (1024L * 1024 * 1024 * 1024.0):0.##} TiB";
+
+            if (bytes >= 1024L * 1024 * 1024)
+                return $"{bytes / (1024L * 1024 * 1024.0):0.##} GiB";
+
+            if (bytes >= 1024L * 1024)
+                return $"{bytes / (1024L * 1024.0):0.##} MiB";
+
+            return $"{bytes / 1024.0:0.##} KiB";
+        }
+
+        // also helper void for DiskParty() used to scan for special /dev/nvme0n1 drives on linux
+        static bool IsWholeDisk(string diskName)
+        {
+            // SATA / SCSI / USB
+            if (diskName.StartsWith("sd") && diskName.Length == 3)
+                return true;
+
+            // NVMe
+            if (diskName.StartsWith("nvme") &&
+                diskName.Contains("n") &&
+                diskName.EndsWith("n1"))
+                return true;
+
+            // eMMC / SD
+            if (diskName.StartsWith("mmcblk") &&
+                diskName.Length > 6 &&
+                char.IsDigit(diskName[6]))
+                return true;
+
+            return false;
         }
 
         // stars ascii :D
@@ -6725,10 +6790,12 @@ Z = undo | Y = redo | O = save | U = load | C = clear | ESC / Q = exit");
             Console.WriteLine("list of [flags] that u can use:");
             Console.WriteLine();
 
-            Console.WriteLine("- create size=[int] - use any existing unallocated space to create a partition");
-            Console.WriteLine("- e.g. partition create size=512M");
-            Console.WriteLine("- add \"M\" for MiB and \"G\" for GiB after [int]");
-            Console.WriteLine();
+            Console.WriteLine("- create size=[int] target=[disk] - use existing unallocated space to create a partition");
+            Console.WriteLine("- e.g. partition create size=512M target=/dev/sda (for linux)");
+            Console.WriteLine("- e.g. partition create size=512M target=0 (for windows)");
+            Console.WriteLine("- for windows, the [disk] flag would have to be number, and that number indicates what disk should be used");
+            Console.WriteLine("- for instance, target=0 means selecting disk 0");
+            Console.WriteLine("");
 
             Console.WriteLine("* resize size=[int] target=[disk] - shrink or expand disk");
             Console.WriteLine("* e.g. partition resize size=16G target=/dev/sda2 (for linux)");
@@ -6847,65 +6914,116 @@ Z = undo | Y = redo | O = save | U = load | C = clear | ESC / Q = exit");
             }
         }
 
-        // partition create size=[int] target=[disk]
-        static void PartitionCreate(string[] args)
+        // dedicated void helper for RunNativeCommand()
+        static int RunSfdisk(string target, string script)
         {
-            if (!TryGetArgument(args, "size", out string size))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("missing size=...");
-                ResForegroundColor();
-                return;
-            }
+            using Process process = new Process();
 
-            if (!TryGetPartitionSize(size, out long sizeMiB))
+            process.StartInfo.FileName = "sfdisk";
+            process.StartInfo.Arguments = $"--no-reread {target}";
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.RedirectStandardInput = true;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
+            process.StartInfo.CreateNoWindow = true;
+
+            process.Start();
+
+            process.StandardInput.Write(script);
+            process.StandardInput.Close();
+
+            Console.Write(process.StandardOutput.ReadToEnd());
+            Console.Error.Write(process.StandardError.ReadToEnd());
+
+            process.WaitForExit();
+
+            return process.ExitCode;
+        }
+
+        // partition create size=[int] target=[disk]
+        static void PartitionCreateLinux(long sizeMiB, string target)
+        {
+            if (!target.StartsWith("/dev/"))
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("invalid size");
-                Console.WriteLine("example: size=512M");
-                Console.WriteLine("example: size=16G");
+                Console.WriteLine("invalid Linux target.");
                 ResForegroundColor();
                 return;
             }
 
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"WARNING: creating a {sizeMiB} MiB partition modifies your partition table.");
-            Console.WriteLine("make sure you actually have unallocated space.");
+            Console.WriteLine($"WARNING: this will modify the partition table on {target}.");
+            Console.Write($"create {sizeMiB} MiB partition? [y/N]: ");
             ResForegroundColor();
 
-            if (OperatingSystem.IsWindows())
+            string? answer = Console.ReadLine();
+
+            if (!string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase))
             {
-                PartitionCreateWindows(sizeMiB);
+                Console.WriteLine("operation cancelled.");
+                return;
             }
-            else if (OperatingSystem.IsLinux())
+
+            string script = $"size={sizeMiB}MiB,type=83\n";
+
+            int exitCode = RunSfdisk(target, script);
+
+            if (exitCode == 0)
             {
-                PartitionCreateLinux(sizeMiB);
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("partition created successfully :D");
             }
             else
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("partition operations are unsupported on this operating system.");
-                ResForegroundColor();
+                Console.WriteLine($"partition creation failed (exit code {exitCode})");
             }
+
+            ResForegroundColor();
         }
 
         // creating partition on windows
-        static void PartitionCreateWindows(long sizeMiB)
+        // creating partition on Windows
+        static void PartitionCreateWindows(long sizeMiB, int diskNumber)
         {
+            if (diskNumber < 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("invalid disk number.");
+                ResForegroundColor();
+                return;
+            }
+
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"WARNING: this will modify the partition table on disk {diskNumber}.");
+            Console.WriteLine($"partition size: {sizeMiB} MiB");
+            Console.Write($"continue? [y/N]: ");
+            ResForegroundColor();
+
+            string? answer = Console.ReadLine();
+
+            if (!string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("operation cancelled.");
+                return;
+            }
+
             string script =
                 "list disk\r\n" +
-                "select disk 0\r\n" +
+                $"select disk {diskNumber}\r\n" +
                 $"create partition primary size={sizeMiB}\r\n" +
                 "exit\r\n";
 
-            string temp = Path.Combine(Path.GetTempPath(), "fiscmd_diskpart.txt");
+            string temp = Path.Combine(
+                Path.GetTempPath(),
+                $"fiscmd-diskpart-{Guid.NewGuid():N}.txt");
 
             try
             {
                 File.WriteAllText(temp, script);
 
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("running Windows DiskPart...");
+                Console.WriteLine($"running Windows DiskPart on disk {diskNumber}...");
                 ResForegroundColor();
 
                 RunNativeCommand(
@@ -6917,8 +7035,14 @@ Z = undo | Y = redo | O = save | U = load | C = clear | ESC / Q = exit");
                 {
                     Console.ForegroundColor = ConsoleColor.Cyan;
                     Console.WriteLine("partition created successfully :D");
-                    ResForegroundColor();
                 }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"DiskPart failed with exit code {exitCode}.");
+                }
+
+                ResForegroundColor();
             }
             finally
             {
@@ -6929,32 +7053,84 @@ Z = undo | Y = redo | O = save | U = load | C = clear | ESC / Q = exit");
                 }
                 catch
                 {
-                    // nothing
+                    // ignore cleanup failure
                 }
             }
         }
 
         // creating partition for linux
-        static void PartitionCreateLinux(long sizeMiB)
+        static void PartitionCreateLinux(long sizeMiB, string target)
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("checking available disks...");
-            ResForegroundColor();
-
-            if (!RunNativeCommand(
-                "lsblk",
-                "-d -o NAME,SIZE,TYPE",
-                out int lsblkExit))
+            if (!File.Exists(target))
             {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"target does not exist: {target}");
+                ResForegroundColor();
                 return;
             }
 
             Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"target: {target}");
+            Console.WriteLine($"partition size: {sizeMiB} MiB");
             Console.WriteLine();
-            Console.WriteLine("fiscmd currently needs a target disk for Linux partition creation.");
-            Console.WriteLine("example:");
-            Console.WriteLine($"partition create size={sizeMiB}M target=/dev/sda");
+            Console.WriteLine("WARNING: this will modify the partition table.");
+            Console.Write("continue? [y/N]: ");
+
             ResForegroundColor();
+
+            string? answer = Console.ReadLine();
+
+            if (!string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("operation cancelled.");
+                return;
+            }
+
+            string script =
+                $"size={sizeMiB}MiB,type=83\n";
+
+            string temp = Path.Combine(
+                Path.GetTempPath(),
+                $"fiscmd-partition-{Guid.NewGuid():N}.sfdisk");
+
+            try
+            {
+                File.WriteAllText(temp, script);
+
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"creating partition on {target}...");
+                ResForegroundColor();
+
+                RunNativeCommand(
+                    "sfdisk",
+                    $"--no-reread {target} < \"{temp}\"",
+                    out int exitCode);
+
+                if (exitCode == 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine("partition created successfully :D");
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"partition creation failed (exit code {exitCode})");
+                }
+
+                ResForegroundColor();
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(temp))
+                        File.Delete(temp);
+                }
+                catch
+                {
+                    // ignore cleanup failure
+                }
+            }
         }
 
         // partition resize size=[int] target=[disk]
@@ -7321,5 +7497,3 @@ Z = undo | Y = redo | O = save | U = load | C = clear | ESC / Q = exit");
         }
     }
 }
-
-
