@@ -6941,73 +6941,79 @@ Z = undo | Y = redo | O = save | U = load | C = clear | ESC / Q = exit");
         }
 
         // partition create size=[int] target=[disk]
-        static void PartitionCreateLinux(long sizeMiB, string target)
+        static void PartitionCreate(string[] args)
         {
-            if (!target.StartsWith("/dev/"))
+            if (!TryGetArgument(args, "size", out string size))
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("invalid Linux target.");
+                Console.WriteLine("missing size=...");
+                ResForegroundColor();
+                return;
+            }
+
+            if (!TryGetArgument(args, "target", out string target))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("missing target=...");
+                ResForegroundColor();
+                return;
+            }
+
+            if (!TryGetPartitionSize(size, out long sizeMiB))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("invalid size");
+                Console.WriteLine("example: size=512M");
+                Console.WriteLine("example: size=16G");
                 ResForegroundColor();
                 return;
             }
 
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"WARNING: this will modify the partition table on {target}.");
-            Console.Write($"create {sizeMiB} MiB partition? [y/N]: ");
+            Console.WriteLine(
+                $"WARNING: creating a {sizeMiB} MiB partition modifies your partition table.");
+            Console.WriteLine($"target: {target}");
+            Console.WriteLine("make sure you actually have unallocated space.");
             ResForegroundColor();
 
-            string? answer = Console.ReadLine();
-
-            if (!string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase))
+            if (OperatingSystem.IsWindows())
             {
-                Console.WriteLine("operation cancelled.");
-                return;
+                if (!int.TryParse(target, out int diskNumber) || diskNumber < 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(
+                        "on Windows, target must be a disk number such as 0 or 1");
+                    ResForegroundColor();
+                    return;
+                }
+
+                PartitionCreateWindows(sizeMiB, diskNumber);
             }
-
-            string script = $"size={sizeMiB}MiB,type=83\n";
-
-            int exitCode = RunSfdisk(target, script);
-
-            if (exitCode == 0)
+            else if (OperatingSystem.IsLinux())
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("partition created successfully :D");
+                if (!target.StartsWith("/dev/"))
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(
+                        "on Linux, target must look like /dev/sda");
+                    ResForegroundColor();
+                    return;
+                }
+
+                PartitionCreateLinux(sizeMiB, target);
             }
             else
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"partition creation failed (exit code {exitCode})");
+                Console.WriteLine(
+                    "partition operations are unsupported on this operating system.");
+                ResForegroundColor();
             }
-
-            ResForegroundColor();
         }
 
-        // creating partition on windows
         // creating partition on Windows
         static void PartitionCreateWindows(long sizeMiB, int diskNumber)
         {
-            if (diskNumber < 0)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("invalid disk number.");
-                ResForegroundColor();
-                return;
-            }
-
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"WARNING: this will modify the partition table on disk {diskNumber}.");
-            Console.WriteLine($"partition size: {sizeMiB} MiB");
-            Console.Write($"continue? [y/N]: ");
-            ResForegroundColor();
-
-            string? answer = Console.ReadLine();
-
-            if (!string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase))
-            {
-                Console.WriteLine("operation cancelled.");
-                return;
-            }
-
             string script =
                 "list disk\r\n" +
                 $"select disk {diskNumber}\r\n" +
@@ -7016,14 +7022,15 @@ Z = undo | Y = redo | O = save | U = load | C = clear | ESC / Q = exit");
 
             string temp = Path.Combine(
                 Path.GetTempPath(),
-                $"fiscmd-diskpart-{Guid.NewGuid():N}.txt");
+                "fiscmd_diskpart.txt");
 
             try
             {
                 File.WriteAllText(temp, script);
 
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"running Windows DiskPart on disk {diskNumber}...");
+                Console.WriteLine(
+                    $"running Windows DiskPart on disk {diskNumber}...");
                 ResForegroundColor();
 
                 RunNativeCommand(
@@ -7035,14 +7042,8 @@ Z = undo | Y = redo | O = save | U = load | C = clear | ESC / Q = exit");
                 {
                     Console.ForegroundColor = ConsoleColor.Cyan;
                     Console.WriteLine("partition created successfully :D");
+                    ResForegroundColor();
                 }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"DiskPart failed with exit code {exitCode}.");
-                }
-
-                ResForegroundColor();
             }
             finally
             {
@@ -7053,7 +7054,6 @@ Z = undo | Y = redo | O = save | U = load | C = clear | ESC / Q = exit");
                 }
                 catch
                 {
-                    // ignore cleanup failure
                 }
             }
         }
