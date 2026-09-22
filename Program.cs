@@ -44,12 +44,17 @@ namespace fis
         static List<string> history = new List<string>();
         static int historyIndex = -1;
 
+        // true color mode yes or no
+        static bool truecolor = false;
+
+        // accept color mode or not
+        static bool nocolormode = false;
+
         // importable commands
         static bool importedFissnake = false;
         static bool importedFisscript = false;
         static bool importedFisdraw = false;
         static bool importedStars = false;
-        static bool importedPart = false;
 		// if u wanna add more importable commands, just add this:
 		// static bool importedCommand = false;
 		// note that it MUST be false here and true later
@@ -105,7 +110,7 @@ namespace fis
             "fistars","fisstar","stars","star",
             "alias",
             "initfis", "initializefis",
-            "partition", "part"
+            "toggletruecolor", "togglenocolor"
         };
 
         static void Main(string[] args)
@@ -129,7 +134,7 @@ namespace fis
                     case "-h":
                     case "--help":
                     case "/?":
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        SetColor(ConsoleColor.Cyan);
                         Console.WriteLine("fiscmd - a silly little console app :D");
                         Console.WriteLine();
                         Console.WriteLine("usage:");
@@ -146,7 +151,7 @@ namespace fis
                     case "--command":
                         if (args.Length < 2)
                         {
-                            Console.ForegroundColor = ConsoleColor.Red;
+                            SetColor(ConsoleColor.Red);
                             Console.WriteLine("where command");
                             return;
                         }
@@ -166,7 +171,7 @@ namespace fis
                     case "--alias":
                         if (args.Length < 3)
                         {
-                            Console.ForegroundColor = ConsoleColor.Cyan;
+                            SetColor(ConsoleColor.Cyan);
                             Console.WriteLine("usage: alias <name> <command>");
                             return;
                         }
@@ -176,7 +181,7 @@ namespace fis
 
                         aliases[aliasName] = aliasCommand;
                         
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        SetColor(ConsoleColor.Cyan);
                         Console.WriteLine($"alias created: {aliasName} >> {aliasCommand} :D");
                         return;
 
@@ -193,7 +198,7 @@ namespace fis
                     case "-c":
                         if (args.Length < 2)
                         {
-                            Console.ForegroundColor = ConsoleColor.Red;
+                            SetColor(ConsoleColor.Red);
                             Console.WriteLine("where command");
                             return;
                         }
@@ -222,7 +227,7 @@ namespace fis
                     */
 
                     default:
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine($"unknown argument: {args[0]}");
                         Console.WriteLine("use 'fiscmd.exe -h' for help");
                         return;
@@ -233,7 +238,7 @@ namespace fis
 
             Console.Title = "have a look have a look one pound fis ><>";
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             PrintFisCoolAsf(true, 25, false);
             TypeWrite(" fiscmd initialized, welcome :D", 25, false);
             Console.WriteLine();
@@ -246,8 +251,8 @@ namespace fis
             while (true)
             {
                 // apply saved colors
-                Console.ForegroundColor = currentFg;
-                Console.BackgroundColor = currentBg;
+                SetColor(currentFg);
+                SetColor(currentBg);
 
                 PrintPrompt();
 
@@ -281,7 +286,7 @@ namespace fis
                 }
                 */
 
-                Console.ForegroundColor = currentFg;
+                SetColor(currentFg);
 
                 string input = ReadCommand();
                 if (string.IsNullOrWhiteSpace(input)) continue;
@@ -328,9 +333,9 @@ namespace fis
             {
                 case "exit":
                 case "quit":
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        SetColor(ConsoleColor.Cyan);
                         Console.WriteLine("tysm for using our console app :D");
-                        Console.ForegroundColor = ConsoleColor.White;
+                        SetColor(ConsoleColor.White);
                         Console.WriteLine("any key to exit sir ;-;");
                         Console.ReadKey(true);
                         Console.ResetColor(); // yk what i mean (who uses ResForegroundColor() upon exiting :skull:)
@@ -383,7 +388,7 @@ namespace fis
                 case "rq":
                 case "require":
                 case "required":
-                    Console.ForegroundColor = ConsoleColor.DarkMagenta;
+                    SetColor(ConsoleColor.DarkMagenta);
                     Console.WriteLine(".NET 6.0 (long-term support)");
                     ResForegroundColor();
                     break;
@@ -398,7 +403,7 @@ namespace fis
                 case "cope": Copy(commandArgs); break;
 
                 case "cp": 
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("what command are u tryna enter :pray::wilted-rose:");
                     ResForegroundColor();
                     break;
@@ -443,6 +448,33 @@ namespace fis
                 case "open":
                 case "launch": RunCommand(commandArgs); break;
 
+                case "toggletruecolor":
+                    if (nocolormode)
+                    {
+                        Console.WriteLine("why would u enter this command when u asked for no color");
+                        break;
+                    }
+
+                    truecolor = !truecolor;
+
+                    if (truecolor)
+                    {
+                        SetColor(ConsoleColor.Cyan);
+                        Console.WriteLine("true color mode is on :D");
+                        Console.WriteLine("experience the ultra 16 million colors");
+                    }
+                    else
+                    {
+                        SetColor(ConsoleColor.Cyan);
+                        Console.WriteLine("true color mode is off :D");
+                    }
+
+                    ResForegroundColor();
+                    break;
+                
+                case "togglenocolor":
+                    
+
                 // goofy miscs
                 case "history":
                 case "his":
@@ -466,7 +498,7 @@ namespace fis
                     SetTitle(commandArgs);
 
                     if (OperatingSystem.IsLinux()) {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        SetColor(ConsoleColor.Yellow);
                         Console.WriteLine("honorable mention: giving ur terminal a custom title wouldn't work on some certain terminals if ur on linux, especially Konsole");
                         ResForegroundColor();
                     }
@@ -566,14 +598,14 @@ namespace fis
                     {
                         if (aliases.Count == 0)
                         {
-                            Console.ForegroundColor = ConsoleColor.Red;
+                            SetColor(ConsoleColor.Red);
                             Console.WriteLine("no aliases");
                             break;
                         }
 
                         foreach (var entry in aliases)
                         {
-                            Console.ForegroundColor = ConsoleColor.Cyan;
+                            SetColor(ConsoleColor.Cyan);
                             Console.WriteLine($"{entry.Key} >> {entry.Value}, gotcha");
                         }
 
@@ -587,12 +619,12 @@ namespace fis
 
                         if (aliases.TryGetValue(aliasName, out string aliasCommand))
                         {
-                            Console.ForegroundColor = ConsoleColor.Cyan;
+                            SetColor(ConsoleColor.Cyan);
                             Console.WriteLine($"{aliasName} >> {aliasCommand}, gotcha");
                         }
                         else
                         {
-                            Console.ForegroundColor = ConsoleColor.Red;
+                            SetColor(ConsoleColor.Red);
                             Console.WriteLine($"alias '{aliasName}' not found");
                         }
 
@@ -650,14 +682,6 @@ namespace fis
 
                     Stars();
                     break;
-                
-                case "partition":
-                case "part":
-                    bool ye7 = WarnNotImported(importedPart);
-                    if (ye7) break;
-
-                    PartitionCommand(commandArgs);
-                    break;
 
                 // unimportable command that used to be importable back then
 
@@ -672,10 +696,13 @@ namespace fis
                 case "#": break; // ragebait command
 
                 default:
-                    if (commandArgs[0] == "color") SetColor(rawInput);
+                    if (commandArgs[0] == "color")
+                    {
+                        SetColorTerminal(rawInput);
+                    }
                     else
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine("ts is barely even a command");
                         ResForegroundColor();
                     }
@@ -738,18 +765,44 @@ namespace fis
             }
         }
 
+        // peak 16 million color true color mode
+        static void TrueColorType(string whatoprint, int r, int g, int b)
+        {
+            if (truecolor)
+                Console.Write($"\x1b[38;2;{r};{g};{b}m");
+
+            Console.Write(whatoprint);
+
+            if (truecolor)
+                Console.Write("\x1b[0m");
+        }
+
+        // hohoho... what's that?
+        // i might lowk be replacing lines of Console.ForegroundColor by now on, my free time is deadass
+        // if setforbackground is true, SetColor() will set the color of the background instead of foregroud
+        static void SetColor(ConsoleColor whatcolor, bool setforbackground=false)
+        {
+            if (!nocolormode)
+            {
+                if (setforbackground)
+                    Console.BackgroundColor = whatcolor;
+                    return;
+                Console.ForegroundColor = whatcolor;
+            }
+        }
+
         // "useless" print the fish ascii
         static void PrintFisCoolAsf(bool type, int delay = 10, bool newline = true)
         {
             if (type)
             {
-                Console.ForegroundColor = ConsoleColor.DarkBlue;
+                SetColor(ConsoleColor.DarkBlue);
                 Console.Write(">");
                 Thread.Sleep(delay);
-                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                SetColor(ConsoleColor.DarkCyan);
                 Console.Write("<");
                 Thread.Sleep(delay);
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.Write(">");
                 Thread.Sleep(delay);
 
@@ -760,18 +813,18 @@ namespace fis
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.Write(">");
-                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                SetColor(ConsoleColor.DarkCyan);
                 Console.Write("<");
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.Write(">");
             }
         }
 
         static void ShowUser()
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             Console.WriteLine($"ur {Environment.UserName}");
             Console.WriteLine("u can still see ur name by using the command \"sysinfo\"");
 
@@ -780,28 +833,28 @@ namespace fis
 
         static void ShowInfo()
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
 
             Console.WriteLine("tysm for using our console app :D");
             Console.WriteLine();
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             Console.WriteLine("welcome to a console app i call \"fiscmd\" :D");
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             Console.WriteLine("in this very simple console app i made...");
             Console.WriteLine("u can do uh...");
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             Console.WriteLine("pretty basic stuff ;-;");
             Console.WriteLine();
             Console.ResetColor();
             Console.WriteLine("basically thats it");
             Console.WriteLine(":ishowspeed-my-mom-is-kinda-homeless:");
             Console.WriteLine();
-            Console.ForegroundColor = ConsoleColor.Red;
+            SetColor(ConsoleColor.Red);
             Console.WriteLine("also forgr to mention ts screams for .NET 6.0 long-term support");
             Console.WriteLine("ye no if u do ctrl + c this would auto exits");
             Console.WriteLine("(IF u have ctrl + shift + c copy method enabled in windows or ur on linux)");
             Console.WriteLine();
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             Console.WriteLine("see ya! :D");
 
             ResForegroundColor();
@@ -823,12 +876,12 @@ namespace fis
                 // no args -> show usage
                 if (parts.Length == 1)
                 {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine("usage: beep [/freq hz] [/dur ms] (/default)");
                     Console.WriteLine("(/default) - optional switch, will plays a 1000 hz frequency for 200 millesec");
                     Console.WriteLine("[/freq hz] - targetted frequency ranged from 37 to 32767 hz");
                     Console.WriteLine("[/dur ms] - duration of the beep (counts in ms)");
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("\nalso forgr to mention that these switches are basically useless on linux :sob:");
                     ResForegroundColor();
                     return;
@@ -849,7 +902,7 @@ namespace fis
                             }
                             else
                             {
-                                Console.ForegroundColor = ConsoleColor.Cyan;
+                                SetColor(ConsoleColor.Cyan);
                                 Console.WriteLine("usage: beep [/freq hz]");
                                 Console.WriteLine("[/freq hz] - targetted frequency ranged from 37 to 32767 hz");
                                 ResForegroundColor();
@@ -866,7 +919,7 @@ namespace fis
                             }
                             else
                             {
-                                Console.ForegroundColor = ConsoleColor.Cyan;
+                                SetColor(ConsoleColor.Cyan);
                                 Console.WriteLine("usage: beep [/freq hz] [/dur ms] (/default)");
                                 Console.WriteLine("[/dur ms] - duration of the beep (counts in ms)");
                                 ResForegroundColor();
@@ -879,7 +932,7 @@ namespace fis
                             break;
 
                         default:
-                            Console.ForegroundColor = ConsoleColor.Red;
+                            SetColor(ConsoleColor.Red);
                             Console.WriteLine("fym by that vro :sob::pray:");
                             ResForegroundColor();
                             return;
@@ -889,7 +942,7 @@ namespace fis
                 // illegal combos
                 if (useDefault && (hasFreq || hasDur))
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("fym by that vro :sob::pray:");
                     ResForegroundColor();
                     return;
@@ -905,7 +958,7 @@ namespace fis
                 // range check
                 if (freq < 37 || freq > 32767)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("freq outta range bro (37 - 32767)");
                     ResForegroundColor();
                     return;
@@ -913,7 +966,7 @@ namespace fis
 
                 if (dur <= 0)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("duration gotta be > 0 :sob::pray:");
                     ResForegroundColor();
                     return;
@@ -926,7 +979,7 @@ namespace fis
                 }
                 catch
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("failed to beep: ur on linux");
                     ResForegroundColor();
                     return;
@@ -945,17 +998,17 @@ namespace fis
             
             if (isWindows)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("ur currently on windows");
             }
             else if (isLinux)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("ur currently on linux");
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("what os even is this bro");
             }
 
@@ -982,8 +1035,8 @@ namespace fis
         static void FakeCrash()
         {
             Console.Clear();
-            Console.BackgroundColor = ConsoleColor.DarkBlue;
-            Console.ForegroundColor = ConsoleColor.White;
+            SetColor(ConsoleColor.DarkBlue, true);
+            SetColor(ConsoleColor.White);
             Console.Clear();
 
             Console.WriteLine("A problem has been detected and Windows has been shut down to prevent damage");
@@ -1387,15 +1440,15 @@ namespace fis
             {
                 // exactly correct command
                 if (exact)
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
 
                 // unfinished command
                 else if (partial)
-                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    SetColor(ConsoleColor.Yellow);
 
                 // invalid command
                 else
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
 
                 var oldFg = Console.ForegroundColor;
 
@@ -1428,7 +1481,7 @@ namespace fis
                         arg.StartsWith("/")
                     )
                     {
-                        Console.ForegroundColor = ConsoleColor.DarkCyan;
+                        SetColor(ConsoleColor.DarkCyan);
                     }
 
                     // quoted strings
@@ -1437,7 +1490,7 @@ namespace fis
                         arg.EndsWith("\"")
                     )
                     {
-                        Console.ForegroundColor = ConsoleColor.DarkYellow;
+                        SetColor(ConsoleColor.DarkYellow);
                     }
 
                     // paths
@@ -1447,7 +1500,7 @@ namespace fis
                         arg.Contains(":")
                     )
                     {
-                        Console.ForegroundColor = ConsoleColor.Blue;
+                        SetColor(ConsoleColor.Blue);
                     }
 
                     // normal args
@@ -1475,7 +1528,7 @@ namespace fis
 
                 string remain = match.Substring(cmd.Length);
 
-                Console.ForegroundColor = ConsoleColor.DarkGray;
+                SetColor(ConsoleColor.DarkGray);
                 Console.Write(remain);
             }
 
@@ -1517,7 +1570,7 @@ namespace fis
             {
                 Console.WriteLine();
 
-                Console.ForegroundColor = ConsoleColor.DarkGray;
+                SetColor(ConsoleColor.DarkGray);
                 Console.WriteLine(string.Join("  ", matches));
 
                 RedrawLine(buffer, cursor);
@@ -1525,13 +1578,21 @@ namespace fis
         }
         */
 
-        static void SetColor(string input)
+        // renamed due to another one "SetColor" exists, if ts was not renamed, there would be problems compiling this project
+        // this one would still use the old Console.ForegroundColor cuz yea
+        static void SetColorTerminal(string input)
         {
+            if (nocolormode)
+            {
+                Console.WriteLine("non-color mode is on, turn it off first >:c");
+                return;
+            }
+
             string[] parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
             if (parts.Length == 1)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: color <fg> [bg] or color default");
                 Console.WriteLine();
                 Console.WriteLine("<fg> is foreground");
@@ -1539,16 +1600,16 @@ namespace fis
                 Console.WriteLine();
                 Console.WriteLine("both <fg> and [bg] can be between 0 and 15");
 
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine();
                 Console.WriteLine("use it wisely, u do NOT wanna be blinded by the texts and");
                 Console.WriteLine("the foreground color being the same");
 
-                Console.ForegroundColor = ConsoleColor.Yellow;
+                SetColor(ConsoleColor.Yellow);
                 Console.WriteLine();
                 Console.WriteLine("also i recommend entering \"cls\" after setting the color");
 
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("(because background color may NOT apply the whole thing without cls)");
                 Console.WriteLine("(also foreground color wouldnt be applying to everything, just the prompt u type bru)");
 
@@ -1566,7 +1627,7 @@ namespace fis
             // validate fg first (no committing yet)
             if (!int.TryParse(parts[1], out int fg) || fg < 0 || fg > 15)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("invalid color :c");
                 return;
             }
@@ -1579,7 +1640,7 @@ namespace fis
             {
                 if (!int.TryParse(parts[2], out int bg) || bg < 0 || bg > 15)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("invalid background color :c");
                     return;
                 }
@@ -1590,13 +1651,13 @@ namespace fis
             // same color detection BEFORE applying anything
             if (newFg == newBg)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("dawg u set both foreground and background same :skull:");
                 Console.WriteLine("still setting color?? (y/n)");
 
                 if (showDir)
                 {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.Write("><[answer]> ");
                 }
                 else
@@ -1625,6 +1686,8 @@ namespace fis
         // only applies to the ><>$ thingy (not whole stuff)
         static void ResForegroundColor()
         {
+            if (nocolormode)
+                return;
             Console.ForegroundColor = currentFg;
         }
 
@@ -1666,7 +1729,7 @@ namespace fis
 
         static void ShowHelp()
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             Console.WriteLine("welcome to the help dialog1!1!11!1!!");
             Console.WriteLine("today imma show u all apps + their command lines");
             Console.WriteLine("that are available on this console app");
@@ -1687,22 +1750,22 @@ namespace fis
             Console.WriteLine("live clock - watchtime");
             Console.WriteLine("fake crash screen - crash");
             Console.WriteLine("display ur current operating system - currentos / curos / os");
-            Console.ForegroundColor = ConsoleColor.DarkYellow;
+            SetColor(ConsoleColor.DarkYellow);
             Console.WriteLine("(spoiler alert: may only checks the real os, wsl linux would still");
             Console.WriteLine("be counted as windows)");
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             Console.WriteLine("view logs - log / update (theres still more in tab autocorrect)");
             Console.WriteLine("exit app - exit (or press ctrl + c)");
-            Console.ForegroundColor = ConsoleColor.DarkYellow;
+            SetColor(ConsoleColor.DarkYellow);
             Console.WriteLine("(alternatively u can press ctrl + c to exit");
             Console.WriteLine("unless ur on windows without ctrl + shift + c copying method enabled)");
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             Console.WriteLine("show disk storage n stuff - diskparty");
             Console.WriteLine("ping 1.1.1.1 and test network - netwatch");
             Console.WriteLine();
-            Console.ForegroundColor = ConsoleColor.Red;
+            SetColor(ConsoleColor.Red);
             Console.WriteLine("stuff that has stuff to do with files (be careful)");
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             Console.WriteLine("browse through directory/folder - cd");
             Console.WriteLine("remove directory/folder - rmdir (or \"rm /rf\" to delete both files that are in it");
             Console.WriteLine("create directory/folder - mkdir");
@@ -1710,20 +1773,20 @@ namespace fis
             Console.WriteLine("list out a directory/folder - ls / dir");
             Console.WriteLine("read out a files content - cat");
             Console.WriteLine("copy a source/file/folder to a destination - copy / cop / cope");
-            Console.ForegroundColor = ConsoleColor.DarkRed;
+            SetColor(ConsoleColor.DarkRed);
             Console.WriteLine("(i am NOT be adding the cp command :sob::pray:)");
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             Console.WriteLine("move a source/file/folder to a destination - move / mov / mv");
             Console.WriteLine("run a file - run / open / launch");
             Console.WriteLine("zip (or unzip) a file/folder - zip / unzip / (more in tab autocor)");
             Console.WriteLine("rename a file/folder - rename / ren / rn (ye, no, rN not rM");
             Console.WriteLine("view a files/sources has (sha-256) -  hash / sha256");
             Console.WriteLine();
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
 
             // commands that no one asked for
             Console.WriteLine("commands that no one asked for");
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             Console.WriteLine("show current directory (><[current dir]>$ ) - toggleShowDir (or lowercase: toggleshowdir)");
             Console.WriteLine("flip coin - coin / morecoins / flipcoin / flipacoin / headsntails / (more in tab autocorrect)");
             Console.WriteLine("show the \"fiscmd initialized...\" message earlier - initializefis / initfis");
@@ -1732,15 +1795,15 @@ namespace fis
 
             // import command
             Console.WriteLine("NEW COMMAND - import / importcmd\nit is said that bro can actually import SPECIAL commands :0");
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             Console.WriteLine("how to use: import <specialcmd>");
             Console.WriteLine("<specialcmd> - special commands needed to import before using");
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             Console.WriteLine("\nfor list of importable commands, type \"import\" and it'll shows the list :D");
             
-            Console.ForegroundColor = ConsoleColor.Red;
+            SetColor(ConsoleColor.Red);
             Console.WriteLine("\nhonorable mention: tab autocorrect is obselette by the syntax highlight");
-			Console.ForegroundColor = ConsoleColor.DarkCyan;
+			SetColor(ConsoleColor.DarkCyan);
 			Console.WriteLine("the tab autocorrect code still remains in the source code");
 
             ResForegroundColor();
@@ -1751,7 +1814,7 @@ namespace fis
             Random rand = new Random();
             int num = rand.Next(0, 101);
 
-            Console.ForegroundColor = ConsoleColor.Magenta;
+            SetColor(ConsoleColor.Magenta);
             Console.WriteLine($"random number (0-100): {num}");
             ResForegroundColor();
         }
@@ -1782,19 +1845,19 @@ namespace fis
                     case "^":
                     case "**": result = Math.Pow(a, b); break;
                     default:
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine("invalid operator");
                         ResForegroundColor();
                         return;
                 }
 
-                Console.ForegroundColor = ConsoleColor.Blue;
+                SetColor(ConsoleColor.Blue);
                 Console.WriteLine($"result: {result}");
                 ResForegroundColor();
             }
             catch
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("calc error");
                 ResForegroundColor();
             }
@@ -1802,8 +1865,8 @@ namespace fis
 
         static void ShowExample()
         {
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.BackgroundColor = ConsoleColor.DarkBlue;
+            SetColor(ConsoleColor.White);
+            SetColor(ConsoleColor.DarkBlue, true);
             Console.WriteLine("   EXAMPLE   ");
             ResForegroundColor();
         }
@@ -1811,7 +1874,7 @@ namespace fis
         static void ShowTime()
         {
             var now = DateTime.Now;
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             Console.WriteLine(now.ToString("HH:mm:ss"));
             ResForegroundColor();
         }
@@ -1819,7 +1882,7 @@ namespace fis
         static void ShowFullTime()
         {
             var now = DateTime.Now;
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             Console.WriteLine(now.ToString("dddd, dd MMMM yyyy HH:mm:ss"));
             ResForegroundColor();
         }
@@ -1834,7 +1897,7 @@ namespace fis
 
             void ShowUsage(string flag = null)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
 
                 Console.WriteLine("usage: echo [/write] [/delay ms] [text]");
 
@@ -1944,9 +2007,9 @@ namespace fis
         {
             if (args.Length < 2)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: mkdir <folder>");
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("i recommmend NOT adding a space in the name");
                 return;
             }
@@ -1956,12 +2019,12 @@ namespace fis
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("directory/folder created :D");
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("directory/folder already exists bro");
             }
 
@@ -1973,12 +2036,12 @@ namespace fis
         {
             if (args.Length < 2)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: rmdir <folder>");
                 Console.Write("<folder> - the ");
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.Write("EMPTY ");
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Red);
+                Console.Write("EMPTY FOLDER ");
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("needed to delete");
                 return;
             }
@@ -1987,7 +2050,7 @@ namespace fis
 
             if (!Directory.Exists(path))
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("directory/folder not found or invalid :c");
                 return;
             }
@@ -1996,18 +2059,18 @@ namespace fis
             {
                 Directory.Delete(path); // non-recursive
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("directory/folder removed :D");
             }
             catch (IOException)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("bro this directory/folder aint empty");
                 Console.WriteLine("use rm /rf if u REALLY mean it");
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine($"failed to remove folder: {ex.Message}");
             }
 
@@ -2019,10 +2082,10 @@ namespace fis
         {
             if (args.Length < 2)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: rm <file> OR rm /rf <folder>");
                 Console.Write("/rf is to delete a whole entire folder ");
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("(be careful)");
                 return;
             }
@@ -2032,11 +2095,11 @@ namespace fis
             {
                 if (args.Length < 3)
                 {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine("usage: rm /rf <folder>");
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("BE CAREFUL WHILE USING THIS, it can PERMANENTLY delete an ENTIRE folder with contents in it");
-                    Console.ForegroundColor = ConsoleColor.DarkRed;
+                    SetColor(ConsoleColor.DarkRed);
                     Console.WriteLine("u have been warned...");
                     return;
                 }
@@ -2045,19 +2108,19 @@ namespace fis
 
                 if (!Directory.Exists(folderPath))
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("folder not found or invalid :c");
                     Console.WriteLine("maybe u forgr to use /rf??");
                     return;
                 }
 
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.Write($"PERMANENTLY DELETE '{args[2]}' FR???? (y/n): ");
                 string confirm = Console.ReadLine()?.ToLower() ?? "n";
 
                 if (confirm != "y")
                 {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine("oh cool u cancelled it :skull:");
                     return;
                 }
@@ -2065,12 +2128,12 @@ namespace fis
                 try
                 {
                     Directory.Delete(folderPath, true);
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("directory/folder nuked, no more undo");
                 }
                 catch (Exception ex)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine($"failed to delete directory/folder: {ex.Message}");
                 }
             }
@@ -2081,18 +2144,18 @@ namespace fis
 
                 if (!File.Exists(filePath))
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("file not found or invalid :c");
                     return;
                 }
 
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.Write($"PERMANENTLY DELETE '{args[1]}'????? (y/n): ");
                 string confirm = Console.ReadLine()?.ToLower() ?? "n";
 
                 if (confirm != "y")
                 {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine("oh cool at least u cancelled it :skull:");
                     return;
                 }
@@ -2100,12 +2163,12 @@ namespace fis
                 try
                 {
                     File.Delete(filePath);
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("file nuked, no more undo");
                 }
                 catch (Exception ex)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine($"failed to delete file: {ex.Message}");
                 }
             }
@@ -2118,7 +2181,7 @@ namespace fis
         {
             if (args.Length < 2)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine($"current directory/folder: {currentDir}");
                 ResForegroundColor();
                 return;
@@ -2149,7 +2212,7 @@ namespace fis
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("ts was barely even a directory/folder");
                 ResForegroundColor();
             }
@@ -2192,13 +2255,13 @@ namespace fis
         {
             if (args.Length < 2)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: touch (/viewhex) <filename>");
                 Console.WriteLine("<filename> - name of the file needed to edit\n");
                 Console.WriteLine("(/hex) - optional switch that show hexes of the file instead of unicode chars");
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("anonnoyingly flashes for every arrow key u press");
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("i hope ur all fine with ur suffering :sob::pray:");
                 ResForegroundColor();
                 return;
@@ -2209,7 +2272,7 @@ namespace fis
 
             if (string.IsNullOrWhiteSpace(filename))
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: touch (/viewhex) <filename>");
                 Console.WriteLine("(/hex) - optional switch that show hexes of the file instead of unicode chars");
 
@@ -2346,7 +2409,7 @@ namespace fis
                     // status bar
                     // =========================
                     Console.SetCursorPosition(0, winH - 2);
-                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    SetColor(ConsoleColor.DarkGray);
 
                     string mode = viewHex ? "[HEX]" : "[TEXT]";
                     string status =
@@ -2410,7 +2473,7 @@ namespace fis
                         }
 
                         Console.SetCursorPosition(0, winH - 1);
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        SetColor(ConsoleColor.Cyan);
 
                         string msg = "[saved with Ctrl+S :D]";
                         if (msg.Length > winW)
@@ -2452,7 +2515,7 @@ namespace fis
                         }
 
                         Console.Clear();
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        SetColor(ConsoleColor.Cyan);
                         Console.WriteLine("saved & exited :D");
                         ResForegroundColor();
                         return;
@@ -2493,7 +2556,7 @@ namespace fis
                             }
 
                             Console.Clear();
-                            Console.ForegroundColor = ConsoleColor.Cyan;
+                            SetColor(ConsoleColor.Cyan);
                             Console.WriteLine("saved :D");
                             ResForegroundColor();
                             return;
@@ -2640,7 +2703,7 @@ namespace fis
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine($"failed to save file: {ex.Message}");
                 ResForegroundColor();
             }
@@ -2662,7 +2725,7 @@ namespace fis
 
                         if (!Directory.Exists(targetDir))
                         {
-                            Console.ForegroundColor = ConsoleColor.Red;
+                            SetColor(ConsoleColor.Red);
                             Console.WriteLine("folder doesnt exist lil bro");
                             ResForegroundColor();
                             return;
@@ -2671,7 +2734,7 @@ namespace fis
                         string[] dirs2 = Directory.GetDirectories(targetDir);
                         string[] files2 = Directory.GetFiles(targetDir);
 
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        SetColor(ConsoleColor.Cyan);
                         Console.WriteLine($"listing: {targetDir}\n");
 
                         // dirs first
@@ -2679,7 +2742,7 @@ namespace fis
                         {
                             string name = Path.GetFileName(dir);
 
-                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            SetColor(ConsoleColor.Yellow);
                             Console.WriteLine($"[DIR]  {name}");
                         }
 
@@ -2690,14 +2753,14 @@ namespace fis
 
                             long size = new FileInfo(file).Length;
 
-                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            SetColor(ConsoleColor.Yellow);
                             Console.WriteLine($"[FILE] {name} ({size} bytes)");
                         }
 
                         // empty check
                         if (dirs2.Length == 0 && files2.Length == 0)
                         {
-                            Console.ForegroundColor = ConsoleColor.Red;
+                            SetColor(ConsoleColor.Red);
                             Console.WriteLine("this folder empty as hell");
                             Console.WriteLine("tf are u expecting me to do :sob:");
                         }
@@ -2709,7 +2772,7 @@ namespace fis
                     // otherwise search mode
                     string keyword = input;
 
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine($"searching for '{keyword}' in: '{currentDir}'...\n");
 
                     int found = 0;
@@ -2721,7 +2784,7 @@ namespace fis
 
                         if (name.Contains(keyword, StringComparison.OrdinalIgnoreCase))
                         {
-                            Console.ForegroundColor = ConsoleColor.DarkGray;
+                            SetColor(ConsoleColor.DarkGray);
                             Console.Write("[DIR]  ");
 
                             HighlightKeyword(dir, keyword);
@@ -2740,12 +2803,12 @@ namespace fis
                         {
                             long size = new FileInfo(file).Length;
 
-                            Console.ForegroundColor = ConsoleColor.DarkGray;
+                            SetColor(ConsoleColor.DarkGray);
                             Console.Write("[FILE] ");
 
                             HighlightKeyword(file, keyword);
 
-                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            SetColor(ConsoleColor.Yellow);
                             Console.Write($" ({size} bytes)");
 
                             Console.WriteLine();
@@ -2755,12 +2818,12 @@ namespace fis
 
                     if (found == 0)
                     {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        SetColor(ConsoleColor.Yellow);
                         Console.WriteLine("found nothing");
                     }
                     else
                     {
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        SetColor(ConsoleColor.Cyan);
                         Console.WriteLine($"\nfound {found} result(s) :D");
                     }
 
@@ -2772,7 +2835,7 @@ namespace fis
                 string[] dirs = Directory.GetDirectories(currentDir);
                 string[] files = Directory.GetFiles(currentDir);
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine($"listing: {currentDir}\n");
 
                 // dirs first
@@ -2780,7 +2843,7 @@ namespace fis
                 {
                     string name = Path.GetFileName(dir);
 
-                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    SetColor(ConsoleColor.Yellow);
                     Console.WriteLine($"[DIR]  {name}");
                 }
 
@@ -2791,26 +2854,26 @@ namespace fis
 
                     long size = new FileInfo(file).Length;
 
-                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    SetColor(ConsoleColor.Yellow);
                     Console.WriteLine($"[FILE] {name} ({size} bytes)");
                 }
 
                 // empty check
                 if (dirs.Length == 0 && files.Length == 0)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("this folder empty as hell");
                     Console.WriteLine("tf are u expecting me to do :sob:");
                 }
             }
             catch (UnauthorizedAccessException)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("restricted folder, get out :skull::wilted-rose:");
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine($"failed to list folder: {ex.Message}");
             }
 
@@ -2829,18 +2892,18 @@ namespace fis
                 // no more matches
                 if (index < 0)
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    SetColor(ConsoleColor.Yellow);
                     Console.Write(text.Substring(start));
                     break;
                 }
 
                 // text before keyword
-                Console.ForegroundColor = ConsoleColor.Yellow;
+                SetColor(ConsoleColor.Yellow);
                 Console.Write(text.Substring(start, index - start));
 
                 // highlighted keyword
-                Console.ForegroundColor = ConsoleColor.Black;
-                Console.BackgroundColor = ConsoleColor.Yellow;
+                SetColor(ConsoleColor.Black);
+                SetColor(ConsoleColor.Yellow, true);
 
                 Console.Write(text.Substring(index, keyword.Length));
 
@@ -2854,7 +2917,7 @@ namespace fis
         {
             if (args.Length < 2)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: cat <filename>");
                 Console.WriteLine("<filename> - the file needed to echo out");
                 return;
@@ -2868,18 +2931,18 @@ namespace fis
                 try
                 {
                     string content = File.ReadAllText(path);
-                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    SetColor(ConsoleColor.Yellow);
                     Console.WriteLine(content);
                 }
                 catch (Exception ex)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine($"failed to read the file: {ex.Message}");
                 }
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("file not found/invalid :c");
             }
 
@@ -2890,7 +2953,7 @@ namespace fis
         {
             if (args.Length < 3)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: copy/cop/cope [-r] <source/file> <destination>");
                 Console.WriteLine("[-r] - copy the entire folder, including its (sub)folders");
                 Console.WriteLine("<source/file> - the source/file needed to copy");
@@ -2904,7 +2967,7 @@ namespace fis
 
             if (filtered.Length < 3)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: copy/cop/cope [-r] <source> <destination>");
                 Console.WriteLine("[-r] - copy the entire folder, including its (sub)folders");
                 Console.WriteLine("<source/file> - the source/file needed to copy");
@@ -2921,7 +2984,7 @@ namespace fis
                 // SAME FILE CHECK
                 if (sourcePath == destPath)
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    SetColor(ConsoleColor.Yellow);
                     Console.WriteLine("source and destination are the same :skull:");
                     ResForegroundColor();
                     return;
@@ -2935,7 +2998,7 @@ namespace fis
 
                     File.Copy(sourcePath, destPath, true);
 
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine("1 file copied :D");
                     ResForegroundColor();
                     return;
@@ -2946,7 +3009,7 @@ namespace fis
                 {
                     if (!recursive)
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine("use -r to copy directories");
                         ResForegroundColor();
                         return;
@@ -2957,19 +3020,19 @@ namespace fis
 
                     CopyDirectory(sourcePath, destPath, ref copied, ref skipped);
 
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine($"{copied} files copied, {skipped} skipped :D");
                     ResForegroundColor();
                     return;
                 }
 
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("source not found :c");
                 ResForegroundColor();
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine($"copy failed: {ex.Message}");
                 ResForegroundColor();
             }
@@ -3032,7 +3095,7 @@ namespace fis
         {
             if (args.Length < 3)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: move/mov/mv [-r] <source/file> <destination>");
                 Console.WriteLine("[-r] - move the entire folder, including its (sub)folders");
                 Console.WriteLine("<source/file> - the source/file needed to move");
@@ -3046,7 +3109,7 @@ namespace fis
 
             if (filtered.Length < 3)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: move/mov/mv [-r] <source/file> <destination>");
                 Console.WriteLine("[-r] - move the entire folder, including its (sub)folders");
                 Console.WriteLine("<source/file> - the source/file needed to move");
@@ -3063,7 +3126,7 @@ namespace fis
                 // SAME PATH CHECK
                 if (sourcePath == destPath)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("source and destination are the same :skull:");
                     ResForegroundColor();
                     return;
@@ -3086,7 +3149,7 @@ namespace fis
                         File.Delete(sourcePath);
                     }
 
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine("1 file moved :D");
                     ResForegroundColor();
                     return;
@@ -3097,7 +3160,7 @@ namespace fis
                 {
                     if (!recursive)
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine("use -r to move directories");
                         ResForegroundColor();
                         return;
@@ -3108,19 +3171,19 @@ namespace fis
 
                     MoveDirectory(sourcePath, destPath, ref moved, ref skipped);
 
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine($"{moved} items moved, {skipped} skipped :D");
                     ResForegroundColor();
                     return;
                 }
 
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("source not found :c");
                 ResForegroundColor();
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine($"move failed: {ex.Message}");
                 ResForegroundColor();
             }
@@ -3199,7 +3262,7 @@ namespace fis
             {
                 if (args.Length < 2)
                 {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine("usage: run/open/launch [args] <file>");
                     Console.WriteLine("u can replace [args] with:");
                     Console.WriteLine("/website or /web - launches webpage/website instead of files");
@@ -3230,7 +3293,7 @@ namespace fis
 
                     if (args.Length < 3)
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine("u forgot the file bro");
                         ResForegroundColor();
                         return;
@@ -3243,7 +3306,7 @@ namespace fis
                 {
                     if (args.Length <= targetIndex + 1)
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine("u forgot the website link bro");
                         ResForegroundColor();
                         return;
@@ -3254,7 +3317,7 @@ namespace fis
                     if (!website.StartsWith("http://") &&
                         !website.StartsWith("https://"))
                     {
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        SetColor(ConsoleColor.Cyan);
                         Console.WriteLine("u forgr the https:// thing brah");
                         Console.WriteLine("press enter or y to auto add");
 
@@ -3272,7 +3335,7 @@ namespace fis
                         UseShellExecute = true
                     });
 
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine("website opened successfully :D");
                     ResForegroundColor();
                     return;
@@ -3288,7 +3351,7 @@ namespace fis
 
                 if (!File.Exists(target))
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("file not found/invalid :c");
                     ResForegroundColor();
                     return;
@@ -3322,13 +3385,13 @@ namespace fis
                     }
                     else
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine("sudo/admin mode isn't supported on this OS :c");
                         ResForegroundColor();
                         return;
                     }
 
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
 
                     if (OperatingSystem.IsLinux())
                     {
@@ -3348,13 +3411,13 @@ namespace fis
                         UseShellExecute = true
                     });
 
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine("launched successfully :D");
                 }
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("failed to launch: " + ex.Message);
             }
 
@@ -3365,11 +3428,11 @@ namespace fis
 
         static void ShowHistory()
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
 
             if (history.Count == 0)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("no history yet :c");
                 ResForegroundColor();
                 return;
@@ -3386,25 +3449,25 @@ namespace fis
             history.Clear();
             historyIndex = -1;
 
-            Console.ForegroundColor = ConsoleColor.DarkRed;
+            SetColor(ConsoleColor.DarkRed);
             Console.WriteLine("ur entire history is nuked, no more undo");
             ResForegroundColor();
         }
 
         static void ShowVersion()
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             Console.WriteLine("fiscmd v1.9 beta ><>");
             /*
-            Console.ForegroundColor = ConsoleColor.DarkYellow;
+            SetColor(ConsoleColor.DarkYellow);
             Console.WriteLine("(LETS GO FINAL V2 WE COOKED)");
             */
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             Console.Write("\nrequirement: ");
-            Console.ForegroundColor = ConsoleColor.DarkMagenta;
+            SetColor(ConsoleColor.DarkMagenta);
             Console.WriteLine(".NET 6.0 LTS");
             Console.WriteLine();
-            Console.ForegroundColor = ConsoleColor.DarkYellow;
+            SetColor(ConsoleColor.DarkYellow);
             Console.WriteLine("ooga booga");
             ResForegroundColor();
         }
@@ -3413,10 +3476,10 @@ namespace fis
         {
             if (args.Length < 2)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: title <text>");
                 Console.WriteLine("<text> is the new console title");
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("whatever u do... DONT USE CURSED CHARACTERS FOR TS :skull:");
                 ResForegroundColor();
                 return;
@@ -3424,7 +3487,7 @@ namespace fis
 
             Console.Title = string.Join(" ", args.Skip(1));
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             Console.WriteLine("title changed :D");
             ResForegroundColor();
         }
@@ -3440,14 +3503,14 @@ namespace fis
         {
             Random r = new Random();
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             Console.WriteLine(r.Next(2) == 0 ? "heads" : "tails");
             ResForegroundColor();
         }
 
         static void SysInfo()
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             Console.WriteLine($"machine: {Environment.MachineName}");
             Console.WriteLine($"user: {Environment.UserName}");
             Console.WriteLine($"os: {Environment.OSVersion}");
@@ -3469,7 +3532,7 @@ namespace fis
         {
             long mem = GC.GetTotalMemory(false);
 
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             Console.WriteLine($"total memory: {mem} KB");
             Console.WriteLine($"managed memory: {mem / 1024} KB");
             ResForegroundColor();
@@ -3486,7 +3549,7 @@ namespace fis
 
             sw.Stop();
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             Console.WriteLine($"benchmark done in {sw.ElapsedMilliseconds} ms");
             ResForegroundColor();
         }
@@ -3498,7 +3561,7 @@ namespace fis
         {
             string target = currentDir;
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             Console.WriteLine($"hollup, creating tree for the directory: {currentDir}");
             Console.WriteLine();
 
@@ -3507,13 +3570,13 @@ namespace fis
 
             if (!Directory.Exists(target))
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("folder not found or invalid :c");
                 ResForegroundColor();
                 return;
             }
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             Console.WriteLine(Path.GetFileName(target));
             Tree(target);
 
@@ -3525,7 +3588,7 @@ namespace fis
             string[] dirs = Directory.GetDirectories(path);
             string[] files = Directory.GetFiles(path);
 
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
 
             foreach (string dir in dirs)
             {
@@ -3545,7 +3608,7 @@ namespace fis
         {
             if (args.Length < 3)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: rename <old> <new>");
                 Console.WriteLine("<old> is source file/folder");
                 Console.WriteLine("<new> is new name");
@@ -3564,18 +3627,18 @@ namespace fis
                     Directory.Move(oldPath, newPath);
                 else
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("source not found :c");
                     ResForegroundColor();
                     return;
                 }
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("renamed :D");
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine($"failed to rename the file/source: {ex.Message}");
             }
 
@@ -3586,7 +3649,7 @@ namespace fis
         {
             if (args.Length < 2)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: zip <folder>");
                 Console.WriteLine("<folder> is the folder needed to compress/zip");
                 ResForegroundColor();
@@ -3600,12 +3663,12 @@ namespace fis
             {
                 ZipFile.CreateFromDirectory(folder, zip);
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("zipped :D");
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine($"zip failed: {ex.Message}");
             }
 
@@ -3616,7 +3679,7 @@ namespace fis
         {
             if (args.Length < 2)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: unzip <file.zip>");
                 Console.WriteLine("<file.zip> is the archive to extract");
                 ResForegroundColor();
@@ -3630,12 +3693,12 @@ namespace fis
             {
                 ZipFile.ExtractToDirectory(zip, outDir);
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("unzipped :D");
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine($"unzip failed: {ex.Message}");
             }
 
@@ -3646,7 +3709,7 @@ namespace fis
         {
             if (args.Length < 2)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: hash <file> [/sha int]");
                 Console.WriteLine("<file> is the file to hash");
                 Console.WriteLine("[/sha int] - 1, 256, 384, 512 (default = 256)");
@@ -3682,7 +3745,7 @@ namespace fis
 
                 using var stream = File.OpenRead(path);
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
 
                 switch (shaType)
                 {
@@ -3707,12 +3770,12 @@ namespace fis
                         break;
                 }
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine(BitConverter.ToString(hash).Replace("-", ""));
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine($"hash failed: {ex.Message}");
             }
 
@@ -3721,24 +3784,25 @@ namespace fis
 
         static void ShowUpdate()
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             TypeWrite("v1.9 beta logs (press any key for each next log ok):\n");
             Console.ReadKey(true);
             TypeWrite("- if ur on linux (or windows with ctrl + shift + c enabled as copying method) pressing ctrl + c wouldn't kill myself");
             Console.ReadKey(true);
-            TypeWrite("SOMETHING HUGE ARRIVED: command \"partition\" is out and it can control ur ENTIRE partition table now");
-            Console.ReadKey(true);
             TypeWrite("- added a ragebait command: quit");
+            Console.ReadKey(true);
+            TypeWrite("- added true color mode AND no color mode, toggle those by running the command \"toggletruecolor\" and \"togglenocolor\"");
+            TypeWrite("that means that if ur a dev making a remake project of this fiscmd, remember to use \"SetColor(ConsoleColor)\" instead of the old \"Console.ForegroundColor\"");
 
             Console.ReadKey(true);
             TypeWrite("- thats it lmao");
             Console.ReadKey(true);
-            Console.ForegroundColor = ConsoleColor.Blue;
+            SetColor(ConsoleColor.Blue);
             TypeWrite("\nfor more logs, https://discord.gg/C4g2RgYr2g");
             TypeWrite("visit the same website now?? (y/N)");
             if (showDir)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.Write("><[answer default: no]> ");
             }
             else
@@ -3755,14 +3819,14 @@ namespace fis
                     FileName = "https://discord.gg/C4g2RgYr2g",
                     UseShellExecute = true
                 });
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 TypeWrite("we basically launched the browser for u :D");
                 Console.ReadKey(true);
             }
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             TypeWrite("\ntysm for using my console app :D");
-            Console.ForegroundColor = ConsoleColor.DarkCyan;
+            SetColor(ConsoleColor.DarkCyan);
             TypeWrite("press any key to return");
             Console.ReadKey(true);
             return;
@@ -3788,7 +3852,7 @@ namespace fis
                         keyword = args[2].ToLower();
                     }
 
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
 
                     if (keyword != "")
                     {
@@ -3825,7 +3889,7 @@ namespace fis
                             .OrderBy(p => p.ProcessName)
                             .ToArray();
 
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        SetColor(ConsoleColor.Cyan);
 
                         if (keyword != "")
                         {
@@ -3841,11 +3905,11 @@ namespace fis
                         Console.WriteLine("\nname                 pid");
                         Console.WriteLine("------------------------");
 
-                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        SetColor(ConsoleColor.Yellow);
 
                         if (watchProcesses.Length <= 0)
                         {
-                            Console.ForegroundColor = ConsoleColor.Red;
+                            SetColor(ConsoleColor.Red);
                             Console.WriteLine("no matching processes found :sob::pray:");
                         }
 
@@ -3863,7 +3927,7 @@ namespace fis
 
                     Console.ReadKey(true);
 
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine("\nstopped watching process :D");
                     ResForegroundColor();
                     return;
@@ -3876,7 +3940,7 @@ namespace fis
                 {
                     if (args.Length < 3)
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine("u forgr the keyword bro");
                         ResForegroundColor();
                         return;
@@ -3904,7 +3968,7 @@ namespace fis
                 {
                     if (args.Length < 3)
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine("u forgr the pid bro");
                         ResForegroundColor();
                         return;
@@ -3912,7 +3976,7 @@ namespace fis
 
                     if (!int.TryParse(args[2], out int targetPid))
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine("ts was barely even a pid");
                         ResForegroundColor();
                         return;
@@ -3923,11 +3987,11 @@ namespace fis
                         .ToArray();
                 }
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("name                 pid");
                 Console.WriteLine("------------------------");
 
-                Console.ForegroundColor = ConsoleColor.Yellow;
+                SetColor(ConsoleColor.Yellow);
 
                 foreach (var proc in processes.OrderBy(p => p.ProcessName))
                 {
@@ -3940,7 +4004,7 @@ namespace fis
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine($"failed to get processes: {ex.Message}");
             }
 
@@ -3952,11 +4016,11 @@ namespace fis
         {
             if (args.Length < 2)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: fiskill <pid> (/search [keyword])");
                 Console.WriteLine("<pid> - the exact process' pid to terminate");
                 Console.WriteLine("(/search [keyword]) - optional switch to search the process' keyword before terminating it");
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("\nbe careful when using this...");
                 ResForegroundColor();
                 return;
@@ -3969,7 +4033,7 @@ namespace fis
                 {
                     if (args.Length < 3)
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine("u forgr the keyword bro");
                         ResForegroundColor();
                         return;
@@ -3990,7 +4054,7 @@ namespace fis
                             }
                         });
 
-                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    SetColor(ConsoleColor.Yellow);
 
                     foreach (var proc in matches)
                     {
@@ -4001,14 +4065,14 @@ namespace fis
                         catch { }
                     }
 
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.Write("\nenter pid to terminate: ");
 
                     string pidInput = Console.ReadLine();
 
                     if (!int.TryParse(pidInput, out int searchedPid))
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine("ts was barely even a pid");
                         ResForegroundColor();
                         return;
@@ -4016,14 +4080,14 @@ namespace fis
 
                     Process target = Process.GetProcessById(searchedPid);
 
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.Write($"PERMANENTLY terminate '{target.ProcessName}'????? (y/n): ");
 
                     string confirm = Console.ReadLine()?.ToLower() ?? "n";
 
                     if (confirm != "y")
                     {
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        SetColor(ConsoleColor.Cyan);
                         Console.WriteLine("oh cool u cancelled it :skull:");
                         ResForegroundColor();
                         return;
@@ -4031,7 +4095,7 @@ namespace fis
 
                     target.Kill(true);
 
-                    Console.ForegroundColor = ConsoleColor.DarkRed;
+                    SetColor(ConsoleColor.DarkRed);
                     Console.WriteLine("process sent to the shadow realm");
                     ResForegroundColor();
                     return;
@@ -4040,7 +4104,7 @@ namespace fis
                 // fiskill 1234
                 if (!int.TryParse(args[1], out int pid))
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("ts was barely even a pid");
                     ResForegroundColor();
                     return;
@@ -4048,14 +4112,14 @@ namespace fis
 
                 Process procToKill = Process.GetProcessById(pid);
 
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.Write($"TERMINATE '{procToKill.ProcessName}' FR????? (y/n): ");
 
                 string confirm2 = Console.ReadLine()?.ToLower() ?? "n";
 
                 if (confirm2 != "y")
                 {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine("oh cool u cancelled it :skull:");
                     ResForegroundColor();
                     return;
@@ -4063,12 +4127,12 @@ namespace fis
 
                 procToKill.Kill(true);
 
-                Console.ForegroundColor = ConsoleColor.DarkRed;
+                SetColor(ConsoleColor.DarkRed);
                 Console.WriteLine("process sent to the shadow realm");
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine($"failed to terminate the process: {ex.Message}");
             }
 
@@ -4095,10 +4159,10 @@ namespace fis
                     {
                         long ms = reply.RoundtripTime;
 
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        SetColor(ConsoleColor.Cyan);
                         Console.WriteLine($"PING: {ms}ms");
 
-                        Console.ForegroundColor = ConsoleColor.Green;
+                        SetColor(ConsoleColor.Green);
                         Console.Write("GRAPH: ");
 
                         for (int i = 0; i < 20; i++)
@@ -4110,13 +4174,13 @@ namespace fis
                     }
                     else
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine("bros internet died mid pinging :sob:");
                     }
                 }
                 catch
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("did bros router rlly exploded :skull:");
                 }
 
@@ -4152,12 +4216,12 @@ namespace fis
                         // Linux reports disk size in 512-byte sectors
                         long totalBytes = sectors * 512;
 
-                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        SetColor(ConsoleColor.Yellow);
                         Console.WriteLine($"{device} [{FormatBytes(totalBytes)}]");
                     }
                     catch
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine($"failed to read {device}");
                     }
                 }
@@ -4175,19 +4239,19 @@ namespace fis
 
                         long total = d.TotalSize;
 
-                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        SetColor(ConsoleColor.Yellow);
                         Console.WriteLine($"{d.Name} [{FormatBytes(total)}]");
                     }
                     catch
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine($"failed to read {d.Name}");
                     }
                 }
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("diskparty is unsupported on this operating system.");
             }
 
@@ -4312,17 +4376,17 @@ namespace fis
         {
             if (args.Length < 2)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: importcmd <cmd> (/listimportedcmds)");
                 Console.WriteLine("<cmd> - the command needed the import");
                 Console.WriteLine("(/listimportedcmds) (or simply enter /list) - shows the list of ALL (yes, ENTIRE) imported commands YOU entered");
-                Console.ForegroundColor = ConsoleColor.DarkRed;
+                SetColor(ConsoleColor.DarkRed);
                 Console.WriteLine("\nWHATEVER YOU DO DONT FCKING PUT 2 SWITCHES AT ONCE OTHERWISE I EXPLOD-");
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("and to put cherry on top, \"importcmd\" command exists for special commands");
 
                 // list of importable commands:
-                Console.ForegroundColor = ConsoleColor.Yellow;
+                SetColor(ConsoleColor.Yellow);
                 Console.WriteLine("\nalso here are list of commands that needs to be imported in order to use:");
                 Console.WriteLine("- a snake game i made - fissnake / snake");
                 Console.WriteLine("- create a .fis file fiscmd script - fisscript / scriptfile / script / scr");
@@ -4366,13 +4430,6 @@ namespace fis
                 Display = "fisstars / fisstar / stars / star",
                 Imported = importedStars,
                 ImportAction = new Action(() => importedStars = true)
-            },
-            new
-            {
-                Names = new[] { "partition", "part" },
-                Display = "partition / part",
-                Imported = importedPart,
-                ImportAction = new Action(() => importedPart = true)
             }
             // now add any importable commands like this
             /*
@@ -4389,7 +4446,7 @@ namespace fis
             // list imported commands
             if (cmd == "/ls" ||cmd == "/list" || cmd == "/listimportedcmds" || cmd == "/listimportedcommands")
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("currently imported commands:\n");
 
                 bool anythingImported = false;
@@ -4398,7 +4455,7 @@ namespace fis
                 {
                     if (item.Imported)
                     {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        SetColor(ConsoleColor.Yellow);
                         Console.WriteLine($"- {item.Display}");
                         anythingImported = true;
                     }
@@ -4406,7 +4463,7 @@ namespace fis
 
                 if (!anythingImported)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    SetColor(ConsoleColor.Red);
                     Console.WriteLine("bro imported absolutely nothing :sob::pray:");
                 }
 
@@ -4421,7 +4478,7 @@ namespace fis
                 {
                     if (item.Imported)
                     {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        SetColor(ConsoleColor.Yellow);
                         Console.WriteLine($"{item.Names[0]} already imported bro");
                         ResForegroundColor();
                         return;
@@ -4429,7 +4486,7 @@ namespace fis
 
                     item.ImportAction();
 
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    SetColor(ConsoleColor.Cyan);
                     Console.WriteLine($"successfully imported {item.Names[0]} :D");
                     ResForegroundColor();
                     return;
@@ -4437,7 +4494,7 @@ namespace fis
             }
 
             // unknown command
-            Console.ForegroundColor = ConsoleColor.Red;
+            SetColor(ConsoleColor.Red);
             Console.WriteLine($"unknown import command: '{cmd}'");
             ResForegroundColor();
         }
@@ -4449,11 +4506,11 @@ namespace fis
 
             if (!whatcmdtobeexact)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.Write("command is valid,");
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine(" but its not imported yet");
-                Console.ForegroundColor = ConsoleColor.Yellow;
+                SetColor(ConsoleColor.Yellow);
                 Console.WriteLine("use the command \"import\" to import them");
                 ResForegroundColor();
                 yes = true;
@@ -4468,22 +4525,22 @@ namespace fis
             // no switches = usages
             if (args.Length == 1)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: fissnake (/default) (/spd [int]) (/size [int])\n");
 
                 Console.WriteLine("(/default) - optional switch used to give out a default size + difficulty");
 
                 Console.Write("(/spd [int]) - set the speed of the game");
 
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine(" (do NOT set ts to 10 unless ur secretly a machine)");
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("(/size [int]) - set the border size");
 
-                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                SetColor(ConsoleColor.DarkCyan);
                 Console.Write("\nusing no switches just opens this usage page cuz im NOT reading minds :skull:\n\nalso in case u dont know, [int] in those 2 switches");
-                Console.ForegroundColor = ConsoleColor.Magenta;
+                SetColor(ConsoleColor.Magenta);
                 Console.WriteLine(" are basically number needed to input");
 
                 ResForegroundColor();
@@ -4519,7 +4576,7 @@ namespace fis
                             {
                                 if (spd < 1 || spd > 10)
                                 {
-                                    Console.ForegroundColor = ConsoleColor.Red;
+                                    SetColor(ConsoleColor.Red);
                                     Console.WriteLine("speed can only be between 1 - 10 lil bro :sob::wilted-rose:");
 
                                     ResForegroundColor();
@@ -4535,7 +4592,7 @@ namespace fis
                             }
                             else
                             {
-                                Console.ForegroundColor = ConsoleColor.Red;
+                                SetColor(ConsoleColor.Red);
                                 Console.WriteLine($"'{args[i + 1]}' is NOT a valid integer lil bro");
 
                                 ResForegroundColor();
@@ -4552,14 +4609,14 @@ namespace fis
                             {
                                 if (size < 10)
                                 {
-                                    Console.ForegroundColor = ConsoleColor.Red;
+                                    SetColor(ConsoleColor.Red);
                                     Console.WriteLine("too microscopic, cancelled");
 
                                     ResForegroundColor();
                                     return;
                                 } else if (size >= 170)
                                 {
-                                    Console.ForegroundColor = ConsoleColor.Red;
+                                    SetColor(ConsoleColor.Red);
                                     Console.WriteLine("too gigantic, cancelled");
 
                                     ResForegroundColor();
@@ -4571,7 +4628,7 @@ namespace fis
                             }
                             else
                             {
-                                Console.ForegroundColor = ConsoleColor.Red;
+                                SetColor(ConsoleColor.Red);
                                 Console.WriteLine($"'{args[i + 1]}' is NOT a valid integer bro :sob::wilted-rose:");
 
                                 ResForegroundColor();
@@ -4583,17 +4640,17 @@ namespace fis
                     // help
                     case "/help":
                     case "/?":
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        SetColor(ConsoleColor.Cyan);
                         Console.WriteLine("usage: fissnake (/default) (/spd [int]) (/size [int])");
 
                         Console.WriteLine("(/default) - optional switch used to give out a default size + difficulty");
 
                         Console.Write("(/spd [int]) - set the speed of the game");
 
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        SetColor(ConsoleColor.Red);
                         Console.WriteLine(" (do NOT set ts to 10 unless ur secretly a machine)");
 
-                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        SetColor(ConsoleColor.Cyan);
                         Console.WriteLine("(/size [int]) - set the border size");
 
                         ResForegroundColor();
@@ -4685,7 +4742,7 @@ namespace fis
                             Console.Clear();
                             Console.CursorVisible = true;
 
-                            Console.ForegroundColor = ConsoleColor.Red;
+                            SetColor(ConsoleColor.Red);
                             Console.WriteLine("bro rage quitted :skull:");
 
                             ResForegroundColor();
@@ -4698,7 +4755,7 @@ namespace fis
                 {
                     Console.Clear();
 
-                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    SetColor(ConsoleColor.Yellow);
                     Console.WriteLine("fissnake - PAUSED");
                     Console.WriteLine("SPACE / P = resume");
                     Console.WriteLine("ESC / Q = quit\n");
@@ -4751,7 +4808,7 @@ namespace fis
                 // draw
                 Console.Clear();
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine($"fissnake - score: {score}");
                 Console.WriteLine($"snake length: {snake.Count}");
                 Console.WriteLine($"speed level: {speed}/10");
@@ -4765,14 +4822,14 @@ namespace fis
                         if (x == 0 || x == width - 1 ||
                             y == 0 || y == height - 1)
                         {
-                            Console.ForegroundColor = ConsoleColor.DarkGray;
+                            SetColor(ConsoleColor.DarkGray);
                             Console.Write("#");
                         }
 
                         // food
                         else if (x == foodX && y == foodY)
                         {
-                            Console.ForegroundColor = ConsoleColor.Red;
+                            SetColor(ConsoleColor.Red);
                             Console.Write("@");
                         }
 
@@ -4787,12 +4844,12 @@ namespace fis
                                 {
                                     if (i == 0)
                                     {
-                                        Console.ForegroundColor = ConsoleColor.Green;
+                                        SetColor(ConsoleColor.Green);
                                         Console.Write("O"); // head
                                     }
                                     else
                                     {
-                                        Console.ForegroundColor = ConsoleColor.DarkGreen;
+                                        SetColor(ConsoleColor.DarkGreen);
                                         Console.Write("*"); // tail
                                     }
 
@@ -4818,17 +4875,17 @@ namespace fis
             Console.Clear();
             Console.CursorVisible = true;
 
-            Console.ForegroundColor = ConsoleColor.Red;
+            SetColor(ConsoleColor.Red);
             TypeWrite("GAME OVER", 50);
 
             Thread.Sleep(1000);
 
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            SetColor(ConsoleColor.Yellow);
             TypeWrite($"final score: {score}", 25);
 
             Thread.Sleep(700);
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             TypeWrite($"final snake length: {snake.Count}", 5);
 
             Thread.Sleep(1000);
@@ -4856,13 +4913,13 @@ namespace fis
             // no args after command
             if (actualArgs.Length < 1)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("usage: script [file.fis] (/guide)");
                 Console.WriteLine("[file.fis] - any files with the .fis file extension");
                 Console.WriteLine("(/guide [command]) - optional switch for actually guiding YOU on how to use ts");
                 Console.WriteLine("(/guide [command]) - and also [command] is optional, u type the command, it will guide u the same command");
 
-                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                SetColor(ConsoleColor.DarkCyan);
                 Console.WriteLine("\nhow to comment: #");
                 Console.WriteLine("example: # this is a comment :D");
 
@@ -4885,7 +4942,7 @@ namespace fis
             }
             catch
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("invalid path lil bro");
                 ResForegroundColor();
                 return;
@@ -4894,7 +4951,7 @@ namespace fis
             // exists?
             if (!File.Exists(fullPath))
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("script not found");
                 ResForegroundColor();
                 return;
@@ -4903,7 +4960,7 @@ namespace fis
             // extension check
             if (Path.GetExtension(fullPath).ToLower() != ".fis")
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("ts is barely even a script");
                 ResForegroundColor();
                 return;
@@ -4923,7 +4980,7 @@ namespace fis
             bool lastIfResult = false;
 
             // script start message
-            Console.ForegroundColor = ConsoleColor.DarkGray;
+            SetColor(ConsoleColor.DarkGray);
             Console.WriteLine($"running script: {Path.GetFileName(fullPath)}\n\nlogs:");
             ResForegroundColor();
 
@@ -5260,7 +5317,7 @@ namespace fis
                             // pause
                             else if (innerCommand == "pause")
                             {
-                                Console.ForegroundColor = ConsoleColor.DarkGray;
+                                SetColor(ConsoleColor.DarkGray);
                                 Console.Write("press any key to continue . . . ");
 
                                 ResForegroundColor();
@@ -5526,7 +5583,7 @@ namespace fis
                             // pause
                             else if (innerCommand == "pause")
                             {
-                                Console.ForegroundColor = ConsoleColor.DarkGray;
+                                SetColor(ConsoleColor.DarkGray);
                                 Console.Write("press any key to continue . . . ");
 
                                 ResForegroundColor();
@@ -5996,7 +6053,7 @@ namespace fis
                                 // pause
                                 else if (funcCommand == "pause")
                                 {
-                                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                                    SetColor(ConsoleColor.DarkGray);
                                     Console.Write("press any key to continue . . . ");
 
                                     ResForegroundColor();
@@ -6008,7 +6065,7 @@ namespace fis
                                 // unknown
                                 else
                                 {
-                                    Console.ForegroundColor = ConsoleColor.DarkRed;
+                                    SetColor(ConsoleColor.DarkRed);
                                     Console.WriteLine($"unknown command in function: {funcCmd[0]}");
                                     ResForegroundColor();
                                 }
@@ -6018,7 +6075,7 @@ namespace fis
                         // not found
                         else
                         {
-                            Console.ForegroundColor = ConsoleColor.DarkRed;
+                            SetColor(ConsoleColor.DarkRed);
                             Console.WriteLine($"function not found: {funcName}");
                             ResForegroundColor();
                         }
@@ -6033,67 +6090,67 @@ namespace fis
                         switch (cmd[1].ToLower())
                         {
                             case "black":
-                                Console.ForegroundColor = ConsoleColor.Black;
+                                SetColor(ConsoleColor.Black);
                                 break;
 
                             case "blue":
-                                Console.ForegroundColor = ConsoleColor.Blue;
+                                SetColor(ConsoleColor.Blue);
                                 break;
 
                             case "cyan":
-                                Console.ForegroundColor = ConsoleColor.Cyan;
+                                SetColor(ConsoleColor.Cyan);
                                 break;
 
                             case "darkblue":
-                                Console.ForegroundColor = ConsoleColor.DarkBlue;
+                                SetColor(ConsoleColor.DarkBlue);
                                 break;
 
                             case "darkcyan":
-                                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                                SetColor(ConsoleColor.DarkCyan);
                                 break;
 
                             case "darkgray":
-                                Console.ForegroundColor = ConsoleColor.DarkGray;
+                                SetColor(ConsoleColor.DarkGray);
                                 break;
 
                             case "darkgreen":
-                                Console.ForegroundColor = ConsoleColor.DarkGreen;
+                                SetColor(ConsoleColor.DarkGreen);
                                 break;
 
                             case "darkmagenta":
-                                Console.ForegroundColor = ConsoleColor.DarkMagenta;
+                                SetColor(ConsoleColor.DarkMagenta);
                                 break;
 
                             case "darkred":
-                                Console.ForegroundColor = ConsoleColor.DarkRed;
+                                SetColor(ConsoleColor.DarkRed);
                                 break;
 
                             case "darkyellow":
-                                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                                SetColor(ConsoleColor.DarkYellow);
                                 break;
 
                             case "gray":
-                                Console.ForegroundColor = ConsoleColor.Gray;
+                                SetColor(ConsoleColor.Gray);
                                 break;
 
                             case "green":
-                                Console.ForegroundColor = ConsoleColor.Green;
+                                SetColor(ConsoleColor.Green);
                                 break;
 
                             case "magenta":
-                                Console.ForegroundColor = ConsoleColor.Magenta;
+                                SetColor(ConsoleColor.Magenta);
                                 break;
 
                             case "red":
-                                Console.ForegroundColor = ConsoleColor.Red;
+                                SetColor(ConsoleColor.Red);
                                 break;
 
                             case "white":
-                                Console.ForegroundColor = ConsoleColor.White;
+                                SetColor(ConsoleColor.White);
                                 break;
 
                             case "yellow":
-                                Console.ForegroundColor = ConsoleColor.Yellow;
+                                SetColor(ConsoleColor.Yellow);
                                 break;
 
                             case "reset":
@@ -6112,7 +6169,7 @@ namespace fis
                 // pause
                 else if (command == "pause")
                 {
-                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    SetColor(ConsoleColor.DarkGray);
                     Console.Write("press any key to continue . . . ");
 
                     ResForegroundColor();
@@ -6130,13 +6187,13 @@ namespace fis
                 // unknown command
                 else
                 {
-                    Console.ForegroundColor = ConsoleColor.DarkRed;
+                    SetColor(ConsoleColor.DarkRed);
                     Console.WriteLine($"unknown command: {cmd[0]}");
                     ResForegroundColor();
                 }
             }
 
-            Console.ForegroundColor = ConsoleColor.DarkGray;
+            SetColor(ConsoleColor.DarkGray);
             Console.WriteLine("script finished :D");
 
             ResForegroundColor();
@@ -6161,7 +6218,7 @@ namespace fis
                 Console.ForegroundColor = col;
             }
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
 
             if (arg == "" || arg == null)
             {
@@ -6271,7 +6328,7 @@ func hi {
                 setcol(ConsoleColor.DarkGray);
                 prnt("darkgray, ", false);
                 setcol(ConsoleColor.Black);
-                Console.BackgroundColor = ConsoleColor.White;
+                SetColor(ConsoleColor.White, true);
                 prnt("black", false);
                 Console.BackgroundColor = currentBg;
                 ResForegroundColor();
@@ -6332,7 +6389,7 @@ func hi {
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                SetColor(ConsoleColor.Red);
                 Console.WriteLine("unknown guide topic :c");
             }
 
@@ -6430,10 +6487,10 @@ func hi {
                 // draw everything
                 Console.SetCursorPosition(0, 0);
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("fisdraw");
 
-                Console.ForegroundColor = ConsoleColor.DarkGray;
+                SetColor(ConsoleColor.DarkGray);
 
                 if (currentFile != null)
                 {
@@ -6456,12 +6513,12 @@ Z = undo | Y = redo | O = save | U = load | C = clear | ESC / Q = exit");
                         // cursor/player
                         if (x == px && y == py)
                         {
-                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            SetColor(ConsoleColor.Yellow);
                             Console.Write('@');
                         }
                         else
                         {
-                            Console.ForegroundColor = ConsoleColor.White;
+                            SetColor(ConsoleColor.White);
                             Console.Write(canvas[y, x]);
                         }
                     }
@@ -6741,759 +6798,8 @@ Z = undo | Y = redo | O = save | U = load | C = clear | ESC / Q = exit");
 
             Console.Clear();
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            SetColor(ConsoleColor.Cyan);
             Console.WriteLine("exited fisdraw");
-        }
-
-        // THE ULTIMATE PARTITION EDITOR
-        static void PartitionCommand(string[] args)
-        {
-            if (args.Length < 2)
-            {
-                ShowPartitionUsage();
-                return;
-            }
-
-            string action = args[1].ToLowerInvariant();
-
-            switch (action)
-            {
-                case "create":
-                    PartitionCreate(args);
-                    break;
-
-                case "resize":
-                    PartitionResize(args);
-                    break;
-
-                case "del":
-                case "delete":
-                case "rm":
-                    PartitionDelete(args);
-                    break;
-
-                default:
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"unknown partition action: {action}");
-                    ResForegroundColor();
-                    ShowPartitionUsage();
-                    break;
-            }
-        }
-
-        // show partition usage
-        static void ShowPartitionUsage()
-        {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-
-            Console.WriteLine("usage: partition [flags]");
-            Console.WriteLine("list of [flags] that u can use:");
-            Console.WriteLine();
-
-            Console.WriteLine("- create size=[int] target=[disk] - use existing unallocated space to create a partition");
-            Console.WriteLine("- e.g. partition create size=512M target=/dev/sda (for linux)");
-            Console.WriteLine("- e.g. partition create size=512M target=0 (for windows)");
-            Console.WriteLine("- for windows, the [disk] flag would have to be number, and that number indicates what disk should be used");
-            Console.WriteLine("- for instance, target=0 means selecting disk 0");
-            Console.WriteLine("");
-
-            Console.WriteLine("* resize size=[int] target=[disk] - shrink or expand disk");
-            Console.WriteLine("* e.g. partition resize size=16G target=/dev/sda2 (for linux)");
-            Console.WriteLine("* e.g. partition resize size=16G target=F: (for windows)");
-            Console.WriteLine();
-
-            Console.WriteLine("- del (or rm) target=[disk] - delete the victim");
-            Console.WriteLine("- e.g. partition rm target=/dev/sda2 (for linux)");
-            Console.WriteLine("- e.g. partition del target=E: (for windows)");
-
-            ResForegroundColor();
-        }
-
-        // attempting to get partition size
-        static bool TryGetPartitionSize(string value, out long sizeMiB)
-        {
-            sizeMiB = 0;
-
-            value = value.Trim().ToUpperInvariant();
-
-            if (value.EndsWith("G"))
-            {
-                if (!long.TryParse(value[..^1], out long gb))
-                    return false;
-
-                if (gb <= 0)
-                    return false;
-
-                sizeMiB = gb * 1024;
-                return true;
-            }
-
-            if (value.EndsWith("M"))
-            {
-                if (!long.TryParse(value[..^1], out long mb))
-                    return false;
-
-                if (mb <= 0)
-                    return false;
-
-                sizeMiB = mb;
-                return true;
-            }
-
-            return false;
-        }
-
-        // attempting to get argument
-        static bool TryGetArgument(string[] args, string name, out string value)
-        {
-            value = "";
-
-            string prefix = name.ToLowerInvariant() + "=";
-
-            for (int i = 2; i < args.Length; i++)
-            {
-                string arg = args[i].Trim();
-
-                if (arg.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    value = arg[prefix.Length..].Trim('"');
-                    return !string.IsNullOrWhiteSpace(value);
-                }
-            }
-
-            return false;
-        }
-
-        // native command runner
-        static bool RunNativeCommand(
-            string fileName,
-            string arguments,
-            out int exitCode)
-        {
-            exitCode = -1;
-
-            try
-            {
-                using Process process = new Process();
-
-                process.StartInfo.FileName = fileName;
-                process.StartInfo.Arguments = arguments;
-                process.StartInfo.UseShellExecute = false;
-                process.StartInfo.RedirectStandardOutput = true;
-                process.StartInfo.RedirectStandardError = true;
-                process.StartInfo.CreateNoWindow = true;
-
-                process.Start();
-
-                string output = process.StandardOutput.ReadToEnd();
-                string error = process.StandardError.ReadToEnd();
-
-                process.WaitForExit();
-
-                exitCode = process.ExitCode;
-
-                if (!string.IsNullOrWhiteSpace(output))
-                    Console.WriteLine(output.TrimEnd());
-
-                if (!string.IsNullOrWhiteSpace(error))
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(error.TrimEnd());
-                    ResForegroundColor();
-                }
-
-                return process.ExitCode == 0;
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"failed to run {fileName}: {ex.Message}");
-                ResForegroundColor();
-
-                return false;
-            }
-        }
-
-        // dedicated void helper for RunNativeCommand()
-        static int RunSfdisk(string target, string script)
-        {
-            using Process process = new Process();
-
-            process.StartInfo.FileName = "sfdisk";
-            process.StartInfo.Arguments = $"--no-reread {target}";
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.RedirectStandardInput = true;
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.RedirectStandardError = true;
-            process.StartInfo.CreateNoWindow = true;
-
-            process.Start();
-
-            process.StandardInput.Write(script);
-            process.StandardInput.Close();
-
-            Console.Write(process.StandardOutput.ReadToEnd());
-            Console.Error.Write(process.StandardError.ReadToEnd());
-
-            process.WaitForExit();
-
-            return process.ExitCode;
-        }
-
-        // partition create size=[int] target=[disk]
-        static void PartitionCreate(string[] args)
-        {
-            if (!TryGetArgument(args, "size", out string size))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("missing size=...");
-                ResForegroundColor();
-                return;
-            }
-
-            if (!TryGetArgument(args, "target", out string target))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("missing target=...");
-                ResForegroundColor();
-                return;
-            }
-
-            if (!TryGetPartitionSize(size, out long sizeMiB))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("invalid size");
-                Console.WriteLine("example: size=512M");
-                Console.WriteLine("example: size=16G");
-                ResForegroundColor();
-                return;
-            }
-
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine(
-                $"WARNING: creating a {sizeMiB} MiB partition modifies your partition table.");
-            Console.WriteLine($"target: {target}");
-            Console.WriteLine("make sure you actually have unallocated space.");
-            ResForegroundColor();
-
-            if (OperatingSystem.IsWindows())
-            {
-                if (!int.TryParse(target, out int diskNumber) || diskNumber < 0)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(
-                        "on Windows, target must be a disk number such as 0 or 1");
-                    ResForegroundColor();
-                    return;
-                }
-
-                PartitionCreateWindows(sizeMiB, diskNumber);
-            }
-            else if (OperatingSystem.IsLinux())
-            {
-                if (!target.StartsWith("/dev/"))
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(
-                        "on Linux, target must look like /dev/sda");
-                    ResForegroundColor();
-                    return;
-                }
-
-                PartitionCreateLinux(sizeMiB, target);
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(
-                    "partition operations are unsupported on this operating system.");
-                ResForegroundColor();
-            }
-        }
-
-        // creating partition on Windows
-        static void PartitionCreateWindows(long sizeMiB, int diskNumber)
-        {
-            string script =
-                "list disk\r\n" +
-                $"select disk {diskNumber}\r\n" +
-                $"create partition primary size={sizeMiB}\r\n" +
-                "exit\r\n";
-
-            string temp = Path.Combine(
-                Path.GetTempPath(),
-                "fiscmd_diskpart.txt");
-
-            try
-            {
-                File.WriteAllText(temp, script);
-
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine(
-                    $"running Windows DiskPart on disk {diskNumber}...");
-                ResForegroundColor();
-
-                RunNativeCommand(
-                    "diskpart.exe",
-                    $"/s \"{temp}\"",
-                    out int exitCode);
-
-                if (exitCode == 0)
-                {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine("partition created successfully :D");
-                    ResForegroundColor();
-                }
-            }
-            finally
-            {
-                try
-                {
-                    if (File.Exists(temp))
-                        File.Delete(temp);
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        // creating partition for linux
-        static void PartitionCreateLinux(long sizeMiB, string target)
-        {
-            if (!File.Exists(target))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"target does not exist: {target}");
-                ResForegroundColor();
-                return;
-            }
-
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"target: {target}");
-            Console.WriteLine($"partition size: {sizeMiB} MiB");
-            Console.WriteLine();
-            Console.WriteLine("WARNING: this will modify the partition table.");
-            Console.Write("continue? [y/N]: ");
-
-            ResForegroundColor();
-
-            string? answer = Console.ReadLine();
-
-            if (!string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase))
-            {
-                Console.WriteLine("operation cancelled.");
-                return;
-            }
-
-            string script =
-                $"size={sizeMiB}MiB,type=83\n";
-
-            string temp = Path.Combine(
-                Path.GetTempPath(),
-                $"fiscmd-partition-{Guid.NewGuid():N}.sfdisk");
-
-            try
-            {
-                File.WriteAllText(temp, script);
-
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"creating partition on {target}...");
-                ResForegroundColor();
-
-                RunNativeCommand(
-                    "sfdisk",
-                    $"--no-reread {target} < \"{temp}\"",
-                    out int exitCode);
-
-                if (exitCode == 0)
-                {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine("partition created successfully :D");
-                }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"partition creation failed (exit code {exitCode})");
-                }
-
-                ResForegroundColor();
-            }
-            finally
-            {
-                try
-                {
-                    if (File.Exists(temp))
-                        File.Delete(temp);
-                }
-                catch
-                {
-                    // ignore cleanup failure
-                }
-            }
-        }
-
-        // partition resize size=[int] target=[disk]
-        static void PartitionResize(string[] args)
-        {
-            if (!TryGetArgument(args, "size", out string size))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("missing size=...");
-                ResForegroundColor();
-                return;
-            }
-
-            if (!TryGetArgument(args, "target", out string target))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("missing target=...");
-                ResForegroundColor();
-                return;
-            }
-
-            if (!TryGetPartitionSize(size, out long sizeMiB))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("invalid size");
-                ResForegroundColor();
-                return;
-            }
-
-            if (OperatingSystem.IsWindows())
-            {
-                if (!IsWindowsDriveTarget(target))
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("on Windows, target must look like F:");
-                    ResForegroundColor();
-                    return;
-                }
-
-                PartitionResizeWindows(target, sizeMiB);
-            }
-            else if (OperatingSystem.IsLinux())
-            {
-                if (!target.StartsWith("/dev/"))
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("on Linux, target must look like /dev/sda2");
-                    ResForegroundColor();
-                    return;
-                }
-
-                PartitionResizeLinux(target, sizeMiB);
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("partition operations are unsupported on this operating system.");
-                ResForegroundColor();
-            }
-        }
-
-        // checking windows drive target
-        static bool IsWindowsDriveTarget(string target)
-        {
-            return target.Length == 2 &&
-                char.IsLetter(target[0]) &&
-                target[1] == ':';
-        }
-
-        // resizing partition on windows
-        static void PartitionResizeWindows(string target, long sizeMiB)
-        {
-            string drive = target.TrimEnd(':');
-
-            string script =
-                "list volume\r\n" +
-                $"select volume {drive}\r\n" +
-                $"shrink desired={sizeMiB}\r\n" +
-                "exit\r\n";
-
-            string temp = Path.Combine(Path.GetTempPath(), "fiscmd_diskpart.txt");
-
-            try
-            {
-                File.WriteAllText(temp, script);
-
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"attempting to resize volume {target}...");
-                ResForegroundColor();
-
-                RunNativeCommand(
-                    "diskpart.exe",
-                    $"/s \"{temp}\"",
-                    out int exitCode);
-
-                if (exitCode == 0)
-                {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine("partition resize command completed :D");
-                    ResForegroundColor();
-                }
-            }
-            finally
-            {
-                try
-                {
-                    if (File.Exists(temp))
-                        File.Delete(temp);
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        // resizing partition on linux
-        static void PartitionResizeLinux(string target, long sizeMiB)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"WARNING: resizing {target} changes its partition boundary.");
-            Console.WriteLine("make sure the filesystem supports the requested operation.");
-            ResForegroundColor();
-
-            string disk = GetParentDisk(target);
-
-            if (string.IsNullOrWhiteSpace(disk))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"could not determine parent disk for {target}");
-                ResForegroundColor();
-                return;
-            }
-
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"parent disk: {disk}");
-            Console.WriteLine("querying partition geometry...");
-            ResForegroundColor();
-
-            // parted uses MiB positions.
-            if (!RunNativeCommand(
-                "parted",
-                $"-s \"{disk}\" unit MiB print",
-                out int exitCode))
-            {
-                return;
-            }
-
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine();
-            Console.WriteLine("automatic Linux resize calculation is not enabled yet.");
-            Console.WriteLine($"requested final size: {sizeMiB} MiB");
-            Console.WriteLine($"target: {target}");
-            Console.WriteLine();
-            Console.WriteLine("this should eventually call:");
-            Console.WriteLine($"parted -s {disk} resizepart <partition-number> <new-end>");
-            ResForegroundColor();
-        }
-
-        // attempting to get disk's parent on linux
-        static string GetParentDisk(string partition)
-        {
-            try
-            {
-                if (!partition.StartsWith("/dev/"))
-                    return "";
-
-                string name = Path.GetFileName(partition);
-
-                // NVMe: /dev/nvme0n1p2 -> /dev/nvme0n1
-                if (name.StartsWith("nvme") && name.Contains('p'))
-                {
-                    int p = name.LastIndexOf('p');
-
-                    if (p > 0)
-                        return "/dev/" + name[..p];
-                }
-
-                // MMC: /dev/mmcblk0p2 -> /dev/mmcblk0
-                if (name.StartsWith("mmcblk") && name.Contains('p'))
-                {
-                    int p = name.LastIndexOf('p');
-
-                    if (p > 0)
-                        return "/dev/" + name[..p];
-                }
-
-                // Normal SATA/SCSI: /dev/sda2 -> /dev/sda
-                int digitStart = name.Length;
-
-                while (digitStart > 0 &&
-                    char.IsDigit(name[digitStart - 1]))
-                {
-                    digitStart--;
-                }
-
-                if (digitStart > 0)
-                    return "/dev/" + name[..digitStart];
-            }
-            catch
-            {
-            }
-
-            return "";
-        }
-
-        // partition del target=[disk]
-        static void PartitionDelete(string[] args)
-        {
-            if (!TryGetArgument(args, "target", out string target))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("missing target=...");
-                ResForegroundColor();
-                return;
-            }
-
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"WARNING: YOU ARE ABOUT TO DELETE {target}");
-            Console.WriteLine("ALL DATA ON THE TARGET VOLUME/PARTITION MAY BECOME INACCESSIBLE.");
-            Console.WriteLine();
-
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.Write("type YES to continue: ");
-            ResForegroundColor();
-
-            string? confirmation = Console.ReadLine();
-
-            if (!string.Equals(
-                confirmation,
-                "YES",
-                StringComparison.Ordinal))
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("operation cancelled.");
-                ResForegroundColor();
-                return;
-            }
-
-            if (OperatingSystem.IsWindows())
-            {
-                if (!IsWindowsDriveTarget(target))
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("on Windows, target must look like E:");
-                    ResForegroundColor();
-                    return;
-                }
-
-                PartitionDeleteWindows(target);
-            }
-            else if (OperatingSystem.IsLinux())
-            {
-                if (!target.StartsWith("/dev/"))
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("on Linux, target must look like /dev/sda2");
-                    ResForegroundColor();
-                    return;
-                }
-
-                PartitionDeleteLinux(target);
-            }
-        }
-
-        // deleting partition on windows
-        static void PartitionDeleteWindows(string target)
-        {
-            string drive = target.TrimEnd(':');
-
-            string script =
-                "list volume\r\n" +
-                $"select volume {drive}\r\n" +
-                "delete volume\r\n" +
-                "exit\r\n";
-
-            string temp = Path.Combine(
-                Path.GetTempPath(),
-                "fiscmd_diskpart.txt");
-
-            try
-            {
-                File.WriteAllText(temp, script);
-
-                RunNativeCommand(
-                    "diskpart.exe",
-                    $"/s \"{temp}\"",
-                    out int exitCode);
-
-                if (exitCode == 0)
-                {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine($"{target} deleted successfully.");
-                    ResForegroundColor();
-                }
-            }
-            finally
-            {
-                try
-                {
-                    if (File.Exists(temp))
-                        File.Delete(temp);
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        // deleting partition on linux
-        static void PartitionDeleteLinux(string target)
-        {
-            string disk = GetParentDisk(target);
-
-            if (string.IsNullOrWhiteSpace(disk))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("could not determine parent disk.");
-                ResForegroundColor();
-                return;
-            }
-
-            string partitionName = Path.GetFileName(target);
-
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"deleting {target}...");
-            ResForegroundColor();
-
-            // parted accepts the partition number.
-            string number = GetPartitionNumber(partitionName);
-
-            if (string.IsNullOrWhiteSpace(number))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("could not determine partition number.");
-                ResForegroundColor();
-                return;
-            }
-
-            RunNativeCommand(
-                "parted",
-                $"-s \"{disk}\" rm {number}",
-                out int exitCode);
-
-            if (exitCode == 0)
-            {
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"{target} deleted successfully.");
-                ResForegroundColor();
-            }
-        }
-
-        // attempting to get partition number on linux
-        static string GetPartitionNumber(string partition)
-        {
-            int i = partition.Length;
-
-            while (i > 0 && char.IsDigit(partition[i - 1]))
-                i--;
-
-            if (i == partition.Length)
-                return "";
-
-            return partition[i..];
         }
     }
 }
