@@ -129,7 +129,22 @@ namespace fis
             // command-line arguments (NEW, added in 1.8 beta, it's HUGEE)
             if (args.Length > 0)
             {
-                switch (args[0].ToLower())
+                if (args.Any(x =>
+                    x.Equals("-nc", StringComparison.OrdinalIgnoreCase) ||
+                    x.Equals("--no-color", StringComparison.OrdinalIgnoreCase)))
+                {
+                    nocolormode = true;
+
+                    args = args
+                        .Where(x =>
+                            !x.Equals("-nc", StringComparison.OrdinalIgnoreCase) &&
+                            !x.Equals("--no-color", StringComparison.OrdinalIgnoreCase))
+                        .ToArray();
+                }
+
+                if (args.Length == 0)
+                    return;
+                switch (args[0].ToLowerInvariant())
                 {
                     case "-h":
                     case "--help":
@@ -143,6 +158,7 @@ namespace fis
                         Console.WriteLine($"{sonwhat} -v (or --version) - show the current version of ts");
                         Console.WriteLine($"{sonwhat} -c (or --command) - execute any command fiscmd currently has");
                         Console.WriteLine($"{sonwhat} -a (or --alias) - add an alias");
+                        Console.WriteLine($"{sonwhat} -nc (or --no-color) - toggle no color mode (add -c next to it to execute commands like normal)");
                         Console.WriteLine($"honorable mention: \"{sonwhat} -q\" (or --quit) do nothing, in fact... this command is a ragebait :skull:");
                         return;
                     
@@ -188,6 +204,11 @@ namespace fis
                     case "-q":
                     case "--quit":
                     case "--exit":
+                        return;
+                    
+                    case "--no-color":
+                    case "-nc":
+                        nocolormode = true;
                         return;
                     
                     /*
@@ -473,6 +494,21 @@ namespace fis
                     break;
                 
                 case "togglenocolor":
+                    nocolormode = !nocolormode;
+
+                    if (nocolormode)
+                    {
+                        Console.WriteLine("no color mode is on :D");
+                        Console.WriteLine("colors have been fucking evicted");
+                    }
+                    else
+                    {
+                        SetColor(ConsoleColor.Cyan);
+                        Console.WriteLine("no color mode is off :D");
+                        ResForegroundColor();
+                    }
+
+                    break;
                     
 
                 // goofy miscs
@@ -768,6 +804,12 @@ namespace fis
         // peak 16 million color true color mode
         static void TrueColorType(string whatoprint, int r, int g, int b)
         {
+            if (nocolormode)
+            {
+                Console.Write(whatoprint);
+                return;
+            }
+
             if (truecolor)
                 Console.Write($"\x1b[38;2;{r};{g};{b}m");
 
@@ -778,17 +820,17 @@ namespace fis
         }
 
         // hohoho... what's that?
-        // i might lowk be replacing lines of Console.ForegroundColor by now on, my free time is deadass
+        // i might lowk be replacing 300+ lines of Console.ForegroundColor by now on, my free time is deadass
         // if setforbackground is true, SetColor() will set the color of the background instead of foregroud
-        static void SetColor(ConsoleColor whatcolor, bool setforbackground=false)
+        static void SetColor(ConsoleColor whatcolor, bool setforbackground = false)
         {
-            if (!nocolormode)
-            {
-                if (setforbackground)
-                    Console.BackgroundColor = whatcolor;
-                    return;
+            if (nocolormode)
+                return;
+
+            if (setforbackground)
+                Console.BackgroundColor = whatcolor;
+            else
                 Console.ForegroundColor = whatcolor;
-            }
         }
 
         // "useless" print the fish ascii
@@ -1073,8 +1115,11 @@ namespace fis
 
         static string ReadCommand()
         {
-            Console.ForegroundColor = currentFg;
-            Console.BackgroundColor = currentBg;
+            if (!nocolormode)
+            {
+                Console.ForegroundColor = currentFg;
+                Console.BackgroundColor = currentBg;
+            }
 
             List<char> buffer = new();
             int cursor = 0;
@@ -1085,8 +1130,11 @@ namespace fis
 
             inputStartTop = Console.CursorTop;
 
-            Console.ForegroundColor = currentFg;
-            Console.BackgroundColor = currentBg;
+            if (!nocolormode)
+            {
+                Console.ForegroundColor = currentFg;
+                Console.BackgroundColor = currentBg;
+            }
 
             while (true)
             {
@@ -1096,7 +1144,7 @@ namespace fis
                 // enter
                 if (key.Key == ConsoleKey.Enter)
                 {
-                    Console.ResetColor();
+                    ResForegroundColor();
                     Console.WriteLine();
 
                     string result = new string(buffer.ToArray());
@@ -1380,8 +1428,11 @@ namespace fis
         // RedrawLine helper void for ReadCommand void
         static void RedrawLine(List<char> buffer, int cursor)
         {
-            Console.ForegroundColor = currentFg;
-            Console.BackgroundColor = currentBg;
+            if (!nocolormode)
+            {
+                Console.ForegroundColor = currentFg;
+                Console.BackgroundColor = currentBg;
+            }
 
             int top = inputStartTop;
 
@@ -1389,17 +1440,19 @@ namespace fis
             string input = new string(buffer.ToArray());
 
             // calculate how many rows the input occupies
-            int totalLength = prompt.Length + input.Length + 10;
-
-            int linesUsed = (totalLength / Console.BufferWidth) + 2;
+            int totalLength = prompt.Length + input.Length;
+            int linesUsed = Math.Max(1, (totalLength + Console.BufferWidth - 1) / Console.BufferWidth);
 
             // clear all affected lines
             for (int i = 0; i < linesUsed; i++)
             {
                 Console.SetCursorPosition(0, top + i);
 
-                Console.ForegroundColor = currentFg;
-                Console.BackgroundColor = currentBg;
+                if (!nocolormode)
+                {
+                    Console.ForegroundColor = currentFg;
+                    Console.BackgroundColor = currentBg;
+                }
 
                 Console.Write(new string(' ', Console.BufferWidth - 1));
             }
@@ -1413,18 +1466,27 @@ namespace fis
             var prevBg = Console.BackgroundColor;
 
             // render prompt
-            Console.ForegroundColor = currentFg;
-            Console.BackgroundColor = currentBg;
+            if (!nocolormode)
+            {
+                Console.ForegroundColor = currentFg;
+                Console.BackgroundColor = currentBg;
+            }
 
             Console.Write(ReturnPrompt());
 
             // restore immediately
-            Console.ForegroundColor = prevFg;
-            Console.BackgroundColor = prevBg;
+            if (!nocolormode)
+            {
+                Console.ForegroundColor = prevFg;
+                Console.BackgroundColor = prevBg;
+            }
 
             // reset after prompt
-            Console.ForegroundColor = currentFg;
-            Console.BackgroundColor = currentBg;
+            if (!nocolormode)
+            {
+                Console.ForegroundColor = currentFg;
+                Console.BackgroundColor = currentBg;
+            }
 
             // split command + args
             string[] parts = input.Split(' ', 2);
@@ -1432,8 +1494,14 @@ namespace fis
             string cmd = parts.Length > 0 ? parts[0] : "";
             string args = parts.Length > 1 ? " " + parts[1] : "";
 
-            bool exact = commands.Contains(cmd);
-            bool partial = commands.Any(c => c.StartsWith(cmd));
+            bool exact = commands.Contains(
+                cmd,
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            bool partial = commands.Any(c =>
+                c.StartsWith(cmd, StringComparison.OrdinalIgnoreCase)
+            );
 
             // command highlighting
             if (cmd.Length > 0)
@@ -1524,7 +1592,8 @@ namespace fis
                 cmd.Length > 0
             )
             {
-                string match = commands.First(c => c.StartsWith(cmd));
+                string match = commands.First(c =>
+                    c.StartsWith(cmd, StringComparison.OrdinalIgnoreCase));
 
                 string remain = match.Substring(cmd.Length);
 
@@ -1788,6 +1857,8 @@ namespace fis
             Console.WriteLine("commands that no one asked for");
             SetColor(ConsoleColor.Yellow);
             Console.WriteLine("show current directory (><[current dir]>$ ) - toggleShowDir (or lowercase: toggleshowdir)");
+            Console.WriteLine("toggle no color mode - togglenocolor");
+            Console.WriteLine("toggle true color mode - toggletruecolor");
             Console.WriteLine("flip coin - coin / morecoins / flipcoin / flipacoin / headsntails / (more in tab autocorrect)");
             Console.WriteLine("show the \"fiscmd initialized...\" message earlier - initializefis / initfis");
             Console.WriteLine("\"exit\" command but translated ragebaitly (NEW) - quit");
@@ -2243,7 +2314,8 @@ namespace fis
 
         static void PrintPrompt()
         {
-            Console.Write($"{ReturnPrompt()}");
+            Console.Write(ReturnPrompt());
+            Console.Out.Flush();
         }
 
         static void toggleShowDir()
