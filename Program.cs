@@ -126,7 +126,7 @@ namespace fis
             if (OperatingSystem.IsLinux())
                 sonwhat = "./fiscmd";
 
-            // command-line arguments (NEW, added in 1.8 beta, it's HUGEE)
+            // command-line arguments (NEW, added in 1.8 beta, updated to be better in 1.9 beta, it's HUGEE)
             if (args.Length > 0)
             {
                 if (args.Any(x =>
@@ -142,8 +142,23 @@ namespace fis
                         .ToArray();
                 }
 
+                if (args.Any(x =>
+                    x.Equals("-tc", StringComparison.OrdinalIgnoreCase) ||
+                    x.Equals("--true-color", StringComparison.OrdinalIgnoreCase)))
+                {
+                    truecolor = true;
+
+                    args = args
+                        .Where(x =>
+                            !x.Equals("-tc", StringComparison.OrdinalIgnoreCase) &&
+                            !x.Equals("--true-color", StringComparison.OrdinalIgnoreCase))
+                        .ToArray();
+                }
+
+                // no command arguments left = open the interactive shell normally
                 if (args.Length == 0)
-                    return;
+                    goto InteractiveShell;
+
                 switch (args[0].ToLowerInvariant())
                 {
                     case "-h":
@@ -159,6 +174,7 @@ namespace fis
                         Console.WriteLine($"{sonwhat} -c (or --command) - execute any command fiscmd currently has");
                         Console.WriteLine($"{sonwhat} -a (or --alias) - add an alias");
                         Console.WriteLine($"{sonwhat} -nc (or --no-color) - toggle no color mode (add -c next to it to execute commands like normal)");
+                        Console.WriteLine($"{sonwhat} -tc (or --true-color) - toggle true color mode (16 million color experience, add -c next to it to execute commands like normal)");
                         Console.WriteLine($"honorable mention: \"{sonwhat} -q\" (or --quit) do nothing, in fact... this command is a ragebait :skull:");
                         return;
                     
@@ -206,11 +222,6 @@ namespace fis
                     case "--exit":
                         return;
                     
-                    case "--no-color":
-                    case "-nc":
-                        nocolormode = true;
-                        return;
-                    
                     /*
                     oh this?
                     forgr bout it ts uses cmd.exe or ur bash shell on linux
@@ -255,7 +266,9 @@ namespace fis
                 }
             }
 
-            Console.CursorVisible = false;
+            InteractiveShell:
+
+                Console.CursorVisible = false;
 
             Console.Title = "have a look have a look one pound fis ><>";
 
@@ -2001,7 +2014,11 @@ namespace fis
             SetColor(ConsoleColor.Yellow);
             Console.WriteLine("show disk storage n stuff - diskparty");
             Console.WriteLine("ping 1.1.1.1 and test network - netwatch");
+            Console.WriteLine("toggle on true color - toggletruecolor");
+            Console.WriteLine("activate non-color mode and annihilate all colors - togglenocolor");
             Console.WriteLine();
+
+            // stuff that has stuff to do with files (be careful)
             SetColor(ConsoleColor.Red);
             Console.WriteLine("stuff that has stuff to do with files (be careful)");
             SetColor(ConsoleColor.Yellow);
@@ -2027,11 +2044,12 @@ namespace fis
             Console.WriteLine("commands that no one asked for");
             SetColor(ConsoleColor.Yellow);
             Console.WriteLine("show current directory (><[current dir]>$ ) - toggleShowDir (or lowercase: toggleshowdir)");
-            Console.WriteLine("toggle no color mode - togglenocolor");
-            Console.WriteLine("toggle true color mode - toggletruecolor");
             Console.WriteLine("flip coin - coin / morecoins / flipcoin / flipacoin / headsntails / (more in tab autocorrect)");
             Console.WriteLine("show the \"fiscmd initialized...\" message earlier - initializefis / initfis");
-            Console.WriteLine("\"exit\" command but translated ragebaitly (NEW) - quit");
+            SetColor(ConsoleColor.DarkYellow);
+            Console.WriteLine("honorable mention: entering \"initfis animate\" while having true color mode on will play a peak animation of the same line");
+            SetColor(ConsoleColor.Yellow);
+            Console.WriteLine("\"exit\" command but translated ragebaitly - quit");
             Console.WriteLine();
 
             // import command
@@ -4036,6 +4054,10 @@ namespace fis
             Console.ReadKey(true);
             TypeWrite("- added true color mode AND no color mode, toggle those by running the command \"toggletruecolor\" and \"togglenocolor\"");
             TypeWrite("that means that if ur a dev making a remake project of this fiscmd, remember to use \"SetColor(ConsoleColor)\" instead of the old \"Console.ForegroundColor\"");
+            Console.ReadKey(true);
+            TypeWrite("- and because of that, the --no-color (-nc) and --true-color (-tc) command-line argument arrived :D");
+            Console.ReadKey(true);
+            TypeWrite("- oh yea also something peak will be activated if u enter \"initfis animate\"");
 
             Console.ReadKey(true);
             TypeWrite("- thats it lmao");
