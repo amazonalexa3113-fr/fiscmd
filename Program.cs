@@ -273,7 +273,7 @@ namespace fis
             {
                 // apply saved colors
                 SetColor(currentFg);
-                SetColor(currentBg);
+                SetColor(currentBg, true);
 
                 PrintPrompt();
 
@@ -617,10 +617,18 @@ namespace fis
 
                 case "initializefis":
                 case "initfis":
-                    PrintFisCoolAsf(true, 25, false);
-                    TypeWrite(" fiscmd initialized, welcome :D", 25, false);
-                    ResForegroundColor();
-                    Console.WriteLine();
+                    if (commandArgs.Length > 1 &&
+                        commandArgs[1].Equals("animate", StringComparison.OrdinalIgnoreCase))
+                    {
+                        AnimateFisCoolAsf();
+                    }
+                    else
+                    {
+                        PrintFisCoolAsf(true, 25, false);
+                        TypeWrite(" fiscmd initialized, welcome :D", 25, false);
+                        ResForegroundColor();
+                        Console.WriteLine();
+                    }
                     break;
 
                 case "netwatch": NetWatch(); break;
@@ -862,6 +870,165 @@ namespace fis
                 SetColor(ConsoleColor.Cyan);
                 Console.Write(">");
             }
+        }
+
+        static void AnimateFisCoolAsf(bool newline = true)
+        {
+            string text = "><> fiscmd initialized, welcome :D";
+
+            // if colors are disabled, don't do ANSI animation.
+            if (nocolormode)
+            {
+                Console.Write(text);
+
+                if (newline)
+                    Console.WriteLine();
+
+                return;
+            }
+
+            int frames = 18;
+
+            // clear the current line before every frame
+            for (int frame = 0; frame <= frames; frame++)
+            {
+                double progress = (double)frame / frames;
+
+                Console.Write("\r\x1b[2K");
+
+                for (int i = 0; i < text.Length; i++)
+                {
+                    double position = (double)i / (text.Length - 1);
+
+                    // smooth white reveal gradient
+                    double distance = progress - position;
+                    double brightness = Math.Clamp((distance + 0.15) / 0.30, 0.0, 1.0);
+
+                    int r = (int)(255 * brightness);
+                    int g = (int)(255 * brightness);
+                    int b = (int)(255 * brightness);
+
+                    if (truecolor)
+                    {
+                        Console.Write($"\x1b[38;2;{r};{g};{b}m");
+                    }
+                    else
+                    {
+                        // approximate the RGB brightness with console colors
+                        if (brightness < 0.25)
+                            SetColor(ConsoleColor.Black);
+                        else if (brightness < 0.5)
+                            SetColor(ConsoleColor.DarkGray);
+                        else if (brightness < 0.75)
+                            SetColor(ConsoleColor.Gray);
+                        else
+                            SetColor(ConsoleColor.White);
+                    }
+
+                    Console.Write(text[i]);
+                }
+
+                // reset ANSI color
+                if (truecolor)
+                {
+                    Console.Write("\x1b[0m");
+                }
+                else
+                {
+                    ResForegroundColor();
+                }
+
+                Thread.Sleep(12);
+            }
+
+            // slow cyan -> dark cyan -> blue sweep
+            int colorFrames = 60;
+            int colorFrameDelay = 1000 / colorFrames;
+
+            // clear the current line before every frame
+            for (int frame = 0; frame <= colorFrames; frame++)
+            {
+                double linearProgress = (double)frame / colorFrames;
+
+                // sine out easing
+                double progress = Math.Sin(linearProgress * Math.PI / 2);
+
+                Console.Write("\r\x1b[2K");
+
+                for (int i = 0; i < text.Length; i++)
+                {
+                    double position = (double)i / (text.Length - 1);
+
+                    // calculate the position inside the cyan -> dark cyan -> blue gradient
+                    double sweep = progress - position;
+
+                    // smooth the edge of the color sweep
+                    double blend = Math.Clamp((sweep + 0.12) / 0.24, 0.0, 1.0);
+
+                    // calculate the cyan -> dark cyan -> blue color
+                    int targetR;
+                    int targetG;
+                    int targetB;
+
+                    if (position < 0.5)
+                    {
+                        // cyan -> darker cyan
+                        double p = position / 0.5;
+
+                        targetR = 0;
+                        targetG = (int)(255 - (75 * p));
+                        targetB = (int)(255 - (35 * p));
+                    }
+                    else
+                    {
+                        // darker cyan -> blue
+                        double p = (position - 0.5) / 0.5;
+
+                        targetR = 0;
+                        targetG = (int)(180 - (100 * p));
+                        targetB = (int)(220 + (35 * p));
+                    }
+
+                    // blend white into the gradient
+                    int r = (int)(255 + ((targetR - 255) * blend));
+                    int g = (int)(255 + ((targetG - 255) * blend));
+                    int b = (int)(255 + ((targetB - 255) * blend));
+
+                    if (truecolor)
+                    {
+                        Console.Write($"\x1b[38;2;{r};{g};{b}m");
+                    }
+                    else
+                    {
+                        // approximate the blended RGB color with console colors
+                        if (blend < 0.25)
+                            SetColor(ConsoleColor.White);
+                        else if (position < 0.5)
+                            SetColor(ConsoleColor.Cyan);
+                        else if (position < 0.75)
+                            SetColor(ConsoleColor.DarkCyan);
+                        else
+                            SetColor(ConsoleColor.Blue);
+                    }
+
+                    Console.Write(text[i]);
+                }
+
+                // reset ANSI color
+                if (truecolor)
+                {
+                    Console.Write("\x1b[0m");
+                }
+                else
+                {
+                    ResForegroundColor();
+                }
+
+                Thread.Sleep(colorFrameDelay);
+            }
+
+            if (newline)
+                Console.WriteLine();
         }
 
         static void ShowUser()
@@ -6505,7 +6672,7 @@ func hi {
                     Path.Combine(currentDir,
                     string.Join(" ", args.Skip(1)));
 
-                if (!currentFile.EndsWith(".txt"))
+                if (!currentFile.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                     currentFile += ".txt";
 
                 if (File.Exists(currentFile))
@@ -6819,7 +6986,7 @@ Z = undo | Y = redo | O = save | U = load | C = clear | ESC / Q = exit");
                                     loadPath = Path.Combine(currentDir, loadInput);
                                 }
 
-                                if (!loadPath.EndsWith(".txt"))
+                                if (!loadPath.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                                     loadPath += ".txt";
 
                                 if (File.Exists(loadPath))
