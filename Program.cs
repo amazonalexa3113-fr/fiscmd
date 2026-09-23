@@ -1121,6 +1121,9 @@ namespace fis
                 Console.BackgroundColor = currentBg;
             }
 
+            Console.CursorVisible = true;
+            Console.SetCursorPosition(Console.CursorLeft, Console.CursorTop);
+
             List<char> buffer = new();
             int cursor = 0;
 
@@ -2315,6 +2318,7 @@ namespace fis
         static void PrintPrompt()
         {
             Console.Write(ReturnPrompt());
+            Console.SetCursorPosition(Console.CursorLeft, Console.CursorTop);
             Console.Out.Flush();
         }
 
