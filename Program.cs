@@ -25,7 +25,9 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.Http;
 using System.Net.NetworkInformation;
+using System.Security.Cryptography;
 // parse quotes helper (to let file interaction functions handles spacing in files' name)
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -55,6 +57,7 @@ namespace fis
         static bool importedFisscript = false;
         static bool importedFisdraw = false;
         static bool importedStars = false;
+        static bool importedDown = false;
 		// if u wanna add more importable commands, just add this:
 		// static bool importedCommand = false;
 		// note that it MUST be false here and true later
@@ -110,7 +113,9 @@ namespace fis
             "fistars","fisstar","stars","star",
             "alias",
             "initfis", "initializefis",
-            "toggletruecolor", "togglenocolor"
+            "toggletruecolor", "togglenocolor",
+            "download", "down", "dl",
+            "man"
         };
 
         static void Main(string[] args)
@@ -740,6 +745,38 @@ namespace fis
                     Stars();
                     break;
 
+                case "download":
+                case "down":
+                case "dl":
+                    bool ye7 = WarnNotImported(importedDown);
+                    if (ye7) break;
+
+                    DownCommand(commandArgs);
+                    break;
+                
+                case "man":
+                    if (OperatingSystem.IsWindows())
+                    {
+                        SetColor(ConsoleColor.Red);
+                        Console.WriteLine("ur not supposed to run ts on windows");
+                        ResForegroundColor();
+                        break;
+                    }
+                    if (!DetectRoot())
+                    {
+                        SetColor(ConsoleColor.Red);
+                        Console.WriteLine("run fiscmd as root before continue");
+                        ResForegroundColor();
+                        break;
+                    }
+                    SetColor(ConsoleColor.Yellow);
+                    Console.Write("attempting to download fiscmd.1 to /usr/share/man/man1...");
+                    DownloadFile("http://amazonalexa3113-fr.github.io/heloworlweb/files/index/fiscmd.1", "/usr/share/man/man1/fiscmd.1");
+                    SetColor(ConsoleColor.Cyan);
+                    Console.WriteLine("\rrun \"man fiscmd\" to seek help");
+                    ResForegroundColor();
+                    break;
+
                 // unimportable command that used to be importable back then
 
                 case "top":
@@ -854,6 +891,24 @@ namespace fis
                 Console.ForegroundColor = whatcolor;
         }
 
+        // totally administrator/root detector        
+        static bool DetectRoot()
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                var principal = new System.Security.Principal.WindowsPrincipal(identity);
+
+                return principal.IsInRole(
+                    System.Security.Principal.WindowsBuiltInRole.Administrator);
+            }
+
+            return geteuid() == 0;
+        }
+
+        [System.Runtime.InteropServices.DllImport("libc")]
+        static extern uint geteuid();
+
         // "useless" print the fish ascii
         static void PrintFisCoolAsf(bool type, int delay = 10, bool newline = true)
         {
@@ -921,7 +976,7 @@ namespace fis
                     int g = (int)(255 * brightness);
                     int b = (int)(255 * brightness);
 
-                    if (truecolor)
+                    if (truecolor && !OperatingSystem.IsWindows())
                     {
                         Console.Write($"\x1b[38;2;{r};{g};{b}m");
                     }
@@ -1007,7 +1062,7 @@ namespace fis
                     int g = (int)(255 + ((targetG - 255) * blend));
                     int b = (int)(255 + ((targetB - 255) * blend));
 
-                    if (truecolor)
+                    if (truecolor && !OperatingSystem.IsWindows())
                     {
                         Console.Write($"\x1b[38;2;{r};{g};{b}m");
                     }
@@ -1611,11 +1666,19 @@ namespace fis
         // RedrawLine helper void for ReadCommand void
         static void RedrawLine(List<char> buffer, int cursor)
         {
-            if (!nocolormode)
+            void ResCol()
             {
-                Console.ForegroundColor = currentFg;
-                Console.BackgroundColor = currentBg;
+                ResForegroundColor();
+                SetColor(currentBg, true);
             }
+
+            void RestoreCol(ConsoleColor previousForeground, ConsoleColor previousBackground)
+            {
+                SetColor(previousForeground);
+                SetColor(previousBackground, true);
+            }
+            
+            ResCol();
 
             int top = inputStartTop;
 
@@ -1631,11 +1694,7 @@ namespace fis
             {
                 Console.SetCursorPosition(0, top + i);
 
-                if (!nocolormode)
-                {
-                    Console.ForegroundColor = currentFg;
-                    Console.BackgroundColor = currentBg;
-                }
+                ResCol();
 
                 Console.Write(new string(' ', Console.BufferWidth - 1));
             }
@@ -1649,27 +1708,15 @@ namespace fis
             var prevBg = Console.BackgroundColor;
 
             // render prompt
-            if (!nocolormode)
-            {
-                Console.ForegroundColor = currentFg;
-                Console.BackgroundColor = currentBg;
-            }
+            ResCol();
 
             Console.Write(ReturnPrompt());
 
             // restore immediately
-            if (!nocolormode)
-            {
-                Console.ForegroundColor = prevFg;
-                Console.BackgroundColor = prevBg;
-            }
+            RestoreCol(prevFg, prevBg);
 
             // reset after prompt
-            if (!nocolormode)
-            {
-                Console.ForegroundColor = currentFg;
-                Console.BackgroundColor = currentBg;
-            }
+            ResCol();
 
             // split command + args
             string[] parts = input.Split(' ', 2);
@@ -1687,11 +1734,11 @@ namespace fis
             );
 
             // command highlighting
-            if (cmd.Length > 0)
+            if (cmd.Length > 0 && !nocolormode)
             {
                 // exactly correct command
                 if (exact)
-                    SetColor(ConsoleColor.Cyan);
+                    SetColor(ConsoleColor.White);
 
                 // unfinished command
                 else if (partial)
@@ -1705,13 +1752,11 @@ namespace fis
 
                 Console.Write(cmd);
 
-                Console.ForegroundColor = currentFg;
-                Console.BackgroundColor = currentBg;
+                ResCol();
             }
 
             // reset after command
-            Console.ForegroundColor = currentFg;
-            Console.BackgroundColor = currentBg;
+            ResCol();
 
             // arguments with highlighting
             if (!string.IsNullOrEmpty(args))
@@ -1757,14 +1802,13 @@ namespace fis
                     // normal args
                     else
                     {
-                        Console.ForegroundColor = currentFg;
+                        SetColor(currentFg);
                     }
 
                     Console.Write(arg);
 
                     // reset after each arg
-                    Console.ForegroundColor = currentFg;
-                    Console.BackgroundColor = currentBg;
+                    ResCol();
                 }
             }
 
@@ -1786,8 +1830,7 @@ namespace fis
 
 
             // reset colors before cursor restore
-            Console.ForegroundColor = currentFg;
-            Console.BackgroundColor = currentBg;
+            ResCol();
 
             // restore cursor
             int absolute = prompt.Length + cursor;
@@ -1798,8 +1841,7 @@ namespace fis
             Console.SetCursorPosition(newLeft, newTop);
 
             // final restore
-            Console.ForegroundColor = currentFg;
-            Console.BackgroundColor = currentBg;
+            ResCol();
         }
 
         /* obselette due to syntax highlight
@@ -1939,6 +1981,7 @@ namespace fis
         static void ResForegroundColor()
         {
             if (nocolormode)
+                Console.ResetColor();
                 return;
             Console.ForegroundColor = currentFg;
         }
@@ -2016,6 +2059,7 @@ namespace fis
             Console.WriteLine("ping 1.1.1.1 and test network - netwatch");
             Console.WriteLine("toggle on true color - toggletruecolor");
             Console.WriteLine("activate non-color mode and annihilate all colors - togglenocolor");
+            Console.WriteLine("get \"man fiscmd\" support - man");
             Console.WriteLine();
 
             // stuff that has stuff to do with files (be careful)
@@ -2336,102 +2380,182 @@ namespace fis
             ResForegroundColor();
         }
 
-        // rm (yes, /rf command too)
+        // rm (yes, /r, /f, /rf and /fr commands too)
         static void Rm(string[] args)
         {
             if (args.Length < 2)
             {
                 SetColor(ConsoleColor.Cyan);
-                Console.WriteLine("usage: rm <file> OR rm /rf <folder>");
-                Console.Write("/rf is to delete a whole entire folder ");
+                Console.WriteLine("usage: rm <file> OR rm /r <folder> OR rm /f <file> OR rm /rf <folder>");
+                Console.WriteLine("/r - delete a entire folder with its contents and ye i mean it bro");
+                Console.WriteLine("/f - extrme force deletion yes");
                 SetColor(ConsoleColor.Red);
-                Console.WriteLine("(be careful)");
+                Console.WriteLine("/rf and /fr combine both (be careful)");
+                ResForegroundColor();
                 return;
             }
 
-            // rm /rf folder (force delete)
-            if (args[1] == "/rf")
+            // Parse /r and /f flags independently.
+            bool recursive = false;
+            bool force = false;
+            int pathStart = 1;
+
+            while (pathStart < args.Length)
             {
-                if (args.Length < 3)
+                string arg = args[pathStart].ToLower();
+
+                if (arg == "/r")
                 {
-                    SetColor(ConsoleColor.Cyan);
-                    Console.WriteLine("usage: rm /rf <folder>");
-                    SetColor(ConsoleColor.Red);
-                    Console.WriteLine("BE CAREFUL WHILE USING THIS, it can PERMANENTLY delete an ENTIRE folder with contents in it");
-                    SetColor(ConsoleColor.DarkRed);
-                    Console.WriteLine("u have been warned...");
-                    return;
+                    recursive = true;
+                    pathStart++;
                 }
-
-                string folderPath = Path.Combine(currentDir, string.Join(" ", args.Skip(2)));
-
-                if (!Directory.Exists(folderPath))
+                else if (arg == "/f")
                 {
-                    SetColor(ConsoleColor.Red);
-                    Console.WriteLine("folder not found or invalid :c");
-                    Console.WriteLine("maybe u forgr to use /rf??");
-                    return;
+                    force = true;
+                    pathStart++;
                 }
-
-                SetColor(ConsoleColor.Red);
-                Console.Write($"PERMANENTLY DELETE '{args[2]}' FR???? (y/n): ");
-                string confirm = Console.ReadLine()?.ToLower() ?? "n";
-
-                if (confirm != "y")
+                else if (arg == "/rf" || arg == "/fr")
                 {
-                    SetColor(ConsoleColor.Cyan);
-                    Console.WriteLine("oh cool u cancelled it :skull:");
-                    return;
+                    recursive = true;
+                    force = true;
+                    pathStart++;
                 }
-
-                try
+                else
                 {
-                    Directory.Delete(folderPath, true);
-                    SetColor(ConsoleColor.Red);
-                    Console.WriteLine("directory/folder nuked, no more undo");
-                }
-                catch (Exception ex)
-                {
-                    SetColor(ConsoleColor.Red);
-                    Console.WriteLine($"failed to delete directory/folder: {ex.Message}");
+                    break;
                 }
             }
-            else
-            {
-                // rm file
-                string filePath = Path.Combine(currentDir, string.Join(" ", args.Skip(1)));
 
-                if (!File.Exists(filePath))
+            if (pathStart >= args.Length)
+            {
+                SetColor(ConsoleColor.Cyan);
+                Console.WriteLine("usage: rm <file>");
+                Console.WriteLine("       rm /r <folder>");
+                Console.WriteLine("       rm /f <file>");
+                Console.WriteLine("       rm /rf <folder>");
+                ResForegroundColor();
+                return;
+            }
+
+            string target = string.Join(" ", args.Skip(pathStart));
+
+            string targetPath = Path.IsPathRooted(target)
+                ? Path.GetFullPath(target)
+                : Path.GetFullPath(Path.Combine(currentDir, target));
+
+            // nuclear rm /rf protection
+            // / is the filesystem root on Unix-like systems.
+            bool isRoot = OperatingSystem.IsLinux() &&
+                        targetPath == Path.DirectorySeparatorChar.ToString();
+
+            if (isRoot && (recursive || force))
+            {
+                SetColor(ConsoleColor.DarkRed);
+                Console.WriteLine("who are you, actually?");
+                ResForegroundColor();
+                return;
+            }
+
+            // dir
+            if (Directory.Exists(targetPath))
+            {
+                if (!recursive)
                 {
                     SetColor(ConsoleColor.Red);
-                    Console.WriteLine("file not found or invalid :c");
+                    Console.WriteLine("target is a directory/folder; use /r to delete it recursively");
+                    ResForegroundColor();
                     return;
                 }
 
                 SetColor(ConsoleColor.Red);
-                Console.Write($"PERMANENTLY DELETE '{args[1]}'????? (y/n): ");
+
+                if (force)
+                {
+                    Console.Write($"FORCE DELETE '{target}' AND ALL CONTENTS????? (y/n): ");
+                }
+                else
+                {
+                    Console.Write($"PERMANENTLY DELETE '{target}' AND ALL CONTENTS????? (y/n): ");
+                }
+
                 string confirm = Console.ReadLine()?.ToLower() ?? "n";
 
                 if (confirm != "y")
                 {
                     SetColor(ConsoleColor.Cyan);
                     Console.WriteLine("oh cool at least u cancelled it :skull:");
+                    ResForegroundColor();
                     return;
                 }
 
                 try
                 {
-                    File.Delete(filePath);
+                    Directory.Delete(targetPath, true);
+
                     SetColor(ConsoleColor.Red);
-                    Console.WriteLine("file nuked, no more undo");
+
+                    if (force)
+                        Console.WriteLine("directory/folder force-nuked, no more undo");
+                    else
+                        Console.WriteLine("directory/folder nuked, no more undo");
+                }
+                catch (Exception ex)
+                {
+                    SetColor(ConsoleColor.Red);
+                    Console.WriteLine($"failed to delete directory/folder: {ex.Message}");
+                }
+
+                ResForegroundColor();
+                return;
+            }
+
+            // file
+            if (File.Exists(targetPath))
+            {
+                SetColor(ConsoleColor.Red);
+
+                if (force)
+                {
+                    Console.Write($"FORCE DELETE '{target}'????? (y/n): ");
+                }
+                else
+                {
+                    Console.Write($"PERMANENTLY DELETE '{target}'????? (y/n): ");
+                }
+
+                string confirm = Console.ReadLine()?.ToLower() ?? "n";
+
+                if (confirm != "y")
+                {
+                    SetColor(ConsoleColor.Cyan);
+                    Console.WriteLine("oh cool at least u cancelled it :skull:");
+                    ResForegroundColor();
+                    return;
+                }
+
+                try
+                {
+                    File.Delete(targetPath);
+
+                    SetColor(ConsoleColor.Red);
+
+                    if (force)
+                        Console.WriteLine("file force-nuked, no more undo");
+                    else
+                        Console.WriteLine("file nuked, no more undo");
                 }
                 catch (Exception ex)
                 {
                     SetColor(ConsoleColor.Red);
                     Console.WriteLine($"failed to delete file: {ex.Message}");
                 }
+
+                ResForegroundColor();
+                return;
             }
 
+            SetColor(ConsoleColor.Red);
+            Console.WriteLine("file/folder not found or invalid :c");
             ResForegroundColor();
         }
 
@@ -3718,18 +3842,12 @@ namespace fis
         static void ShowVersion()
         {
             SetColor(ConsoleColor.Yellow);
-            Console.WriteLine("fiscmd v1.9 beta ><>");
-            /*
+            Console.WriteLine("fiscmd v2 beta ><>");
+            Console.Write("\n"); // lol
             SetColor(ConsoleColor.DarkYellow);
             Console.WriteLine("(LETS GO FINAL V2 WE COOKED)");
-            */
-            SetColor(ConsoleColor.Yellow);
-            Console.Write("\nrequirement: ");
-            SetColor(ConsoleColor.DarkMagenta);
-            Console.WriteLine(".NET 6.0 LTS");
-            Console.WriteLine();
             SetColor(ConsoleColor.DarkYellow);
-            Console.WriteLine("ooga booga");
+            Console.WriteLine("\"yo chat can we survive watching sahurHub for 25 hours 8 days? let's find out >:D\"");
             ResForegroundColor();
         }
 
@@ -3971,68 +4089,166 @@ namespace fis
             if (args.Length < 2)
             {
                 SetColor(ConsoleColor.Cyan);
-                Console.WriteLine("usage: hash <file> [/sha int]");
-                Console.WriteLine("<file> is the file to hash");
-                Console.WriteLine("[/sha int] - 1, 256, 384, 512 (default = 256)");
+                Console.WriteLine("usage: hash /<algorithm> [/match] <filename> [hash]");
+                Console.WriteLine("/md5 - use MD5");
+                Console.WriteLine("/sha <bits> - use SHA-1, SHA-256, SHA-384, or SHA-512");
+                Console.WriteLine("/match - compare the calculated hash against a provided hash");
+                Console.WriteLine("<filename> - file to hash");
+                Console.WriteLine("[hash] - expected hash when using /match");
                 ResForegroundColor();
                 return;
             }
 
-            int shaType = 256;
-            string filePath = "";
+            string algorithm = null;
+            bool match = false;
+            string filename = null;
+            string expectedHash = null;
 
-            // parse args
             for (int i = 1; i < args.Length; i++)
             {
-                if (args[i].ToLower() == "/sha" && i + 1 < args.Length)
+                string arg = args[i];
+
+                if (arg.Equals("/md5", StringComparison.OrdinalIgnoreCase))
                 {
-                    int.TryParse(args[i + 1], out shaType);
-                    i++; // skip next arg
+                    algorithm = "MD5";
+                }
+                else if (arg.Equals("/sha", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (i + 1 >= args.Length)
+                    {
+                        SetColor(ConsoleColor.Red);
+                        Console.WriteLine("hash: /sha requires a hash size");
+                        ResForegroundColor();
+                        return;
+                    }
+
+                    string bits = args[++i];
+
+                    switch (bits)
+                    {
+                        case "1":
+                            algorithm = "SHA1";
+                            break;
+
+                        case "256":
+                            algorithm = "SHA256";
+                            break;
+
+                        case "384":
+                            algorithm = "SHA384";
+                            break;
+
+                        case "512":
+                            algorithm = "SHA512";
+                            break;
+
+                        default:
+                            SetColor(ConsoleColor.Red);
+                            Console.WriteLine($"hash: unsupported SHA size: {bits}");
+                            ResForegroundColor();
+                            return;
+                    }
+                }
+                else if (arg.Equals("/match", StringComparison.OrdinalIgnoreCase))
+                {
+                    match = true;
+                }
+                else if (filename == null)
+                {
+                    filename = arg;
+                }
+                else if (match && expectedHash == null)
+                {
+                    expectedHash = arg;
                 }
                 else
                 {
-                    // collect file path (supports spaces)
-                    if (filePath.Length > 0)
-                        filePath += " ";
-                    filePath += args[i];
+                    SetColor(ConsoleColor.Red);
+                    Console.WriteLine($"hash: unexpected argument: {arg}");
+                    ResForegroundColor();
+                    return;
                 }
             }
 
-            string path = Path.Combine(currentDir, filePath);
+            if (algorithm == null)
+            {
+                SetColor(ConsoleColor.Red);
+                Console.WriteLine("hash: no hashing algorithm specified");
+                ResForegroundColor();
+                return;
+            }
+
+            if (filename == null)
+            {
+                SetColor(ConsoleColor.Red);
+                Console.WriteLine("hash: no filename specified");
+                ResForegroundColor();
+                return;
+            }
+
+            if (match && expectedHash == null)
+            {
+                SetColor(ConsoleColor.Red);
+                Console.WriteLine("hash: /match requires an expected hash");
+                ResForegroundColor();
+                return;
+            }
+
+            string filePath = Path.IsPathRooted(filename)
+                ? filename
+                : Path.Combine(currentDir, filename);
 
             try
             {
-                byte[] hash;
+                using FileStream stream = File.OpenRead(filePath);
+                using HashAlgorithm hasher = CreateHasher(algorithm);
 
-                using var stream = File.OpenRead(path);
+                byte[] hashBytes = hasher.ComputeHash(stream);
+                string actualHash = Convert.ToHexString(hashBytes).ToLowerInvariant();
 
-                SetColor(ConsoleColor.Cyan);
-
-                switch (shaType)
+                if (match)
                 {
-                    case 1:
-                        using (var sha1 = System.Security.Cryptography.SHA1.Create())
-                            hash = sha1.ComputeHash(stream);
-                        break;
+                    byte[] expectedBytes = Convert.FromHexString(expectedHash);
 
-                    case 384:
-                        using (var sha384 = System.Security.Cryptography.SHA384.Create())
-                            hash = sha384.ComputeHash(stream);
-                        break;
-
-                    case 512:
-                        using (var sha512 = System.Security.Cryptography.SHA512.Create())
-                            hash = sha512.ComputeHash(stream);
-                        break;
-
-                    default:
-                        using (var sha256 = System.Security.Cryptography.SHA256.Create())
-                            hash = sha256.ComputeHash(stream);
-                        break;
+                    if (expectedBytes.Length != hashBytes.Length)
+                    {
+                        SetColor(ConsoleColor.Red);
+                        Console.WriteLine("hash mismatch");
+                        SetColor(ConsoleColor.Cyan);
+                        Console.WriteLine($"expected: {expectedHash}");
+                        Console.WriteLine($"actual:   {actualHash}");
+                    }
+                    else if (CryptographicOperations.FixedTimeEquals(
+                        hashBytes,
+                        expectedBytes))
+                    {
+                        SetColor(ConsoleColor.Cyan);
+                        Console.WriteLine("hash match :D");
+                    }
+                    else
+                    {
+                        SetColor(ConsoleColor.Red);
+                        Console.WriteLine("hash mismatch");
+                        SetColor(ConsoleColor.Cyan);
+                        Console.WriteLine($"expected: {expectedHash}");
+                        Console.WriteLine($"actual:   {actualHash}");
+                    }
                 }
-
-                SetColor(ConsoleColor.Cyan);
-                Console.WriteLine(BitConverter.ToString(hash).Replace("-", ""));
+                else
+                {
+                    SetColor(ConsoleColor.Cyan);
+                    Console.WriteLine($"{algorithm}: {actualHash}");
+                }
+            }
+            catch (FileNotFoundException)
+            {
+                SetColor(ConsoleColor.Red);
+                Console.WriteLine($"hash: file not found: {filePath}");
+            }
+            catch (FormatException)
+            {
+                SetColor(ConsoleColor.Red);
+                Console.WriteLine("hash: expected hash must be valid hexadecimal");
             }
             catch (Exception ex)
             {
@@ -4043,21 +4259,50 @@ namespace fis
             ResForegroundColor();
         }
 
+        // helper void for HashFile()
+        static HashAlgorithm CreateHasher(string algorithm)
+        {
+            switch (algorithm)
+            {
+                case "MD5":
+                    return MD5.Create();
+
+                case "SHA1":
+                    return SHA1.Create();
+
+                case "SHA256":
+                    return SHA256.Create();
+
+                case "SHA384":
+                    return SHA384.Create();
+
+                case "SHA512":
+                    return SHA512.Create();
+
+                default:
+                    throw new ArgumentException(
+                        $"Unsupported hashing algorithm: {algorithm}");
+            }
+        }
+
         static void ShowUpdate()
         {
             SetColor(ConsoleColor.Yellow);
-            TypeWrite("v1.9 beta logs (press any key for each next log ok):\n");
+            TypeWrite("v2 beta logs (press any key for each next log ok):\n");
             Console.ReadKey(true);
-            TypeWrite("- if ur on linux (or windows with ctrl + shift + c enabled as copying method) pressing ctrl + c wouldn't kill myself");
+            TypeWrite("- \"initfis animate\" wouldn't show the gradient on windows (or on linux without true color mode on) since cmd.exe doesn't support true color");
             Console.ReadKey(true);
-            TypeWrite("- added a ragebait command: quit");
+            TypeWrite("- added a /match flag to the \"hash\" command :D");
             Console.ReadKey(true);
-            TypeWrite("- added true color mode AND no color mode, toggle those by running the command \"toggletruecolor\" and \"togglenocolor\"");
-            TypeWrite("that means that if ur a dev making a remake project of this fiscmd, remember to use \"SetColor(ConsoleColor)\" instead of the old \"Console.ForegroundColor\"");
+            TypeWrite("- NEW IMPORTABLE COMMAND: download");
             Console.ReadKey(true);
-            TypeWrite("- and because of that, the --no-color (-nc) and --true-color (-tc) command-line argument arrived :D");
+            TypeWrite("- NEW COMMAND: man (seek the \"help\" command to find out how it works)");
             Console.ReadKey(true);
-            TypeWrite("- oh yea also something peak will be activated if u enter \"initfis animate\"");
+            TypeWrite("- made rm rejects the infamous -rf / on linux");
+            Console.ReadKey(true);
+            TypeWrite("- obliterated the requirement label off the version shower (the \"ver\" command, yk?)");
+            Console.ReadKey(true);
+            TypeWrite("- fixed the prompt showing the same color as the syntax hightligting color from v1.8 beta or v1.9 beta");
 
             Console.ReadKey(true);
             TypeWrite("- thats it lmao");
@@ -4629,7 +4874,89 @@ namespace fis
             Console.Clear();
         }
 
-        // partition command
+        // download file from internet fr fr (System.Net.Http, new thing)
+        static void DownCommand(string[] args)
+        {
+            if (args.Length < 2)
+            {
+                SetColor(ConsoleColor.Cyan);
+                Console.WriteLine("usage: download/dl <url> [filename] [destination]");
+                Console.WriteLine("<url> - the download link that u need to fill in");
+                Console.WriteLine("[filename] - optional flag used to set custom filename instead");
+                Console.WriteLine("[destination] - optional flag used to download the file to a destinaton instead");
+                ResForegroundColor();
+                return;
+            }
+
+            string url = args[1];
+
+            try
+            {
+                Uri uri = new Uri(url);
+
+                string fileName;
+
+                if (args.Length >= 3)
+                    fileName = args[2];
+                else
+                    fileName = Path.GetFileName(uri.LocalPath);
+
+                if (string.IsNullOrWhiteSpace(fileName))
+                    fileName = "download";
+
+                string destination = currentDir;
+
+                if (args.Length >= 4)
+                    destination = string.Join(" ", args.Skip(3));
+
+                string outputPath = Path.Combine(destination, fileName);
+
+                DownloadFile(url, outputPath);
+            }
+            catch (Exception ex)
+            {
+                SetColor(ConsoleColor.Red);
+                Console.WriteLine($"download failed: {ex.Message}");
+                ResForegroundColor();
+            }
+        }
+
+        // helper void for DownloadCommand()
+        static void DownloadFile(string url, string outputPath)
+        {
+            try
+            {
+                using HttpClient client = new HttpClient();
+
+                using HttpResponseMessage response =
+                    client.GetAsync(
+                        url,
+                        HttpCompletionOption.ResponseHeadersRead
+                    ).GetAwaiter().GetResult();
+
+                response.EnsureSuccessStatusCode();
+
+                using Stream input =
+                    response.Content.ReadAsStreamAsync()
+                        .GetAwaiter()
+                        .GetResult();
+
+                using FileStream output =
+                    File.Create(outputPath);
+
+                input.CopyTo(output);
+
+                SetColor(ConsoleColor.Cyan);
+                Console.WriteLine($"downloaded: {outputPath}");
+            }
+            catch (Exception ex)
+            {
+                SetColor(ConsoleColor.Red);
+                Console.WriteLine($"download failed: {ex.Message}");
+            }
+
+            ResForegroundColor();
+        }
 
 
 
@@ -4695,6 +5022,13 @@ namespace fis
                 Display = "fisstars / fisstar / stars / star",
                 Imported = importedStars,
                 ImportAction = new Action(() => importedStars = true)
+            },
+            new
+            {
+                Names = new[] {"download", "down", "dl" },
+                Display = "download / down / dl",
+                Imported = importedDown,
+                ImportAction = new Action(() => importedDown = true)
             }
             // now add any importable commands like this
             /*
