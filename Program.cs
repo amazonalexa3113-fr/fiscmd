@@ -4302,9 +4302,10 @@ namespace fis
             TypeWrite("- obliterated the requirement label off the version shower (the \"ver\" command, yk?)");
             Console.ReadKey(true);
             TypeWrite("- fixed the prompt showing the same color as the syntax hightligting color from v1.8 beta or v1.9 beta");
-
             Console.ReadKey(true);
             TypeWrite("- shortend the \"animate\" switch from command \"initfis\" (\"initfis animate\") to \"anim\"");
+            Console.ReadKey(true);
+            TypeWrite("- added syntax highlighting to the \"touch\" command");
 
             Console.ReadKey(true);
             TypeWrite("- thats it lmao");
