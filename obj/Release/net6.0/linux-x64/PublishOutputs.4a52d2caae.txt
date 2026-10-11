@@ -1,2 +1,0 @@
-/home/swindow/Documents/fiscmdproject/bin/Release/net6.0/linux-x64/publish/fis.pdb
-/home/swindow/Documents/fiscmdproject/bin/Release/net6.0/linux-x64/publish/fis
