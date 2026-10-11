@@ -635,8 +635,7 @@ namespace fis
 
                 case "initializefis":
                 case "initfis":
-                    if (commandArgs.Length > 1 &&
-                        commandArgs[1].Equals("animate", StringComparison.OrdinalIgnoreCase) || commandArgs[1].Equals("anim", StringComparison.OrdinalIgnoreCase))
+                    if (commandArgs.Length > 1 && commandArgs[1].Equals("animate", StringComparison.OrdinalIgnoreCase) || commandArgs[1].Equals("anim", StringComparison.OrdinalIgnoreCase))
                     {
                         AnimateFisCoolAsf();
                     }
@@ -4303,8 +4302,11 @@ namespace fis
             TypeWrite("- obliterated the requirement label off the version shower (the \"ver\" command, yk?)");
             Console.ReadKey(true);
             TypeWrite("- fixed the prompt showing the same color as the syntax hightligting color from v1.8 beta or v1.9 beta");
+<<<<<<< HEAD
             Console.ReadKey(true);
             TypeWrite("- shortend the \"animate\" switch from command \"initfis\" (\"initfis animate\") to \"anim\"");
+=======
+>>>>>>> origin/main
 
             Console.ReadKey(true);
             TypeWrite("- thats it lmao");
