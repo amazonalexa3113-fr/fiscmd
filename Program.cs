@@ -15,8 +15,9 @@ made entirely using the default csharp language
 
 bye :D
 
-more than 7 thousand worth of lines :sob::pray: (honorable mention: all made by chatgpt and a 13 yo teenager named swindow)
+more than 7.5 thousand worth of lines :sob::pray: (honorable mention: all made by chatgpt and a 13 yo teenager named swindow)
 
+just a reminder for you swindow, update the RunCommand() void alr
 */
 
 using System;
@@ -118,6 +119,100 @@ namespace fis
             "man"
         };
 
+        // run foreground process helper void for the RunCommand()
+        static int RunShellCommand(string command)
+        {
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                SetColor(ConsoleColor.Red);
+                Console.WriteLine("where's the command bro");
+                ResForegroundColor();
+                return 1;
+            }
+
+            bool isWindows = OperatingSystem.IsWindows();
+            bool isLinux = OperatingSystem.IsLinux();
+
+            if (!isWindows && !isLinux)
+            {
+                SetColor(ConsoleColor.Red);
+                Console.WriteLine("shell launching isn't supported on this OS yet");
+                ResForegroundColor();
+                return 1;
+            }
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = isWindows ? "cmd.exe" : "/bin/bash",
+                UseShellExecute = false,
+                WorkingDirectory = currentDir
+            };
+
+            if (isWindows)
+            {
+                startInfo.ArgumentList.Add("/d");
+                startInfo.ArgumentList.Add("/s");
+                startInfo.ArgumentList.Add("/c");
+            }
+            else
+            {
+                startInfo.ArgumentList.Add("-c");
+            }
+
+            startInfo.ArgumentList.Add(command);
+
+            using var process = new Process { StartInfo = startInfo };
+
+            SetColor(ConsoleColor.Cyan);
+            Console.WriteLine("press ctrl+c to fuckass the program");
+
+            ConsoleCancelEventHandler cancelHandler = (sender, e) =>
+            {
+                e.Cancel = true;
+
+                try
+                {
+                    if (!process.HasExited)
+                        process.Kill(entireProcessTree: true);
+                }
+                catch (InvalidOperationException)
+                {
+                    // The process already exited.
+                }
+                catch (System.ComponentModel.Win32Exception)
+                {
+                    // The process could not be terminated.
+                }
+            };
+
+            Console.CancelKeyPress += cancelHandler;
+
+            try
+            {
+                if (!process.Start())
+                {
+                    SetColor(ConsoleColor.Red);
+                    Console.WriteLine("failed to start the shell :c");
+                    ResForegroundColor();
+                    return 1;
+                }
+
+                process.WaitForExit();
+                return process.ExitCode;
+            }
+            catch (Exception ex)
+            {
+                SetColor(ConsoleColor.Red);
+                Console.WriteLine($"failed to launch shell: {ex.Message}");
+                ResForegroundColor();
+                return 1;
+            }
+            finally
+            {
+                Console.CancelKeyPress -= cancelHandler;
+            }
+        }
+
         static void Main(string[] args)
         {
             // preventing [CTRL] + C (SIGINT) termination
@@ -177,7 +272,6 @@ namespace fis
                         Console.WriteLine($"{sonwhat} -h (or --help) - show this help");
                         Console.WriteLine($"{sonwhat} -v (or --version) - show the current version of ts");
                         Console.WriteLine($"{sonwhat} -c (or --command) - execute any command fiscmd currently has");
-                        Console.WriteLine($"{sonwhat} -a (or --alias) - add an alias");
                         Console.WriteLine($"{sonwhat} -nc (or --no-color) - toggle no color mode (add -c next to it to execute commands like normal)");
                         Console.WriteLine($"{sonwhat} -tc (or --true-color) - toggle true color mode (16 million color experience, add -c next to it to execute commands like normal)");
                         Console.WriteLine($"honorable mention: \"{sonwhat} -q\" (or --quit) do nothing, in fact... this command is a ragebait :skull:");
@@ -206,25 +300,14 @@ namespace fis
                     
                     case "-a":
                     case "--alias":
-                        if (args.Length < 3)
-                        {
-                            SetColor(ConsoleColor.Cyan);
-                            Console.WriteLine("usage: alias <name> <command>");
-                            return;
-                        }
-
-                        string aliasName = args[1];
-                        string aliasCommand = string.Join(" ", args.Skip(2));
-
-                        aliases[aliasName] = aliasCommand;
-                        
-                        SetColor(ConsoleColor.Cyan);
-                        Console.WriteLine($"alias created: {aliasName} >> {aliasCommand} :D");
+                        SetColor(ConsoleColor.Red);
+                        Console.WriteLine("uhm... that argument got removed from v1.9 beta what are you doing here");
                         return;
 
                     case "-q":
                     case "--quit":
                     case "--exit":
+                        Console.WriteLine("get ragebaited");
                         return;
                     
                     /*
@@ -485,12 +568,19 @@ namespace fis
 
                 case "run":
                 case "open":
-                case "launch": RunCommand(commandArgs); break;
+                case "launch": RunCommand(commandArgs, rawInput); break;
 
                 case "toggletruecolor":
                     if (nocolormode)
                     {
                         Console.WriteLine("why would u enter this command when u asked for no color");
+                        break;
+                    }
+
+                    if (OperatingSystem.IsWindows())
+                    {
+                        SetColor(ConsoleColor.Red);
+                        Console.WriteLine("NO SHIT UR cmd.exe DO NOT HAVE TRUE COLOR SUPPORT GNG");
                         break;
                     }
 
@@ -635,7 +725,7 @@ namespace fis
 
                 case "initializefis":
                 case "initfis":
-                    if (commandArgs.Length > 1 && commandArgs[1].Equals("animate", StringComparison.OrdinalIgnoreCase) || commandArgs[1].Equals("anim", StringComparison.OrdinalIgnoreCase))
+                    if (commandArgs.Length > 1 && (commandArgs[1].Equals("animate", StringComparison.OrdinalIgnoreCase) || commandArgs[1].Equals("anim", StringComparison.OrdinalIgnoreCase)))
                     {
                         AnimateFisCoolAsf();
                     }
@@ -1563,11 +1653,11 @@ namespace fis
 
             string typed = beforeCursor.Substring(argStart);
 
-            // Don't autocomplete empty command itself
+            // don't autocomplete empty command itself
             if (argStart == 0 && !typed.Contains("/") && !typed.Contains("\\"))
                 return;
 
-            // If this is a new Tab cycle, find matches
+            // if this is a new [TAB] cycle, find matches
             if (tabPrefix != typed || tabMatches.Count == 0)
             {
                 tabPrefix = typed;
@@ -1627,13 +1717,13 @@ namespace fis
             if (tabMatches.Count == 0)
                 return;
 
-            // Cycle to next match
+            // cycle to next match
             tabIndex = (tabIndex + 1) % tabMatches.Count;
 
             string selected = tabMatches[tabIndex];
             string selectedName = Path.GetFileName(selected);
 
-            // Keep directory prefix if one was typed
+            // keep dir prefix if one was typed
             string replacement;
 
             string typedWithoutQuotes = typed.Trim('"');
@@ -1645,15 +1735,15 @@ namespace fis
             else
                 replacement = selectedName;
 
-            // Add trailing separator when selected item is a directory
+            // add trailing separator when selected item is a directory
             if (Directory.Exists(selected))
                 replacement += Path.DirectorySeparatorChar;
 
-            // Preserve quotes if the user started with one
+            // preserve quotes if the user started with one
             if (typed.StartsWith("\""))
                 replacement = "\"" + replacement.TrimEnd(Path.DirectorySeparatorChar) + "\"";
 
-            // Replace current argument
+            // replace current argument
             buffer.RemoveRange(argStart, cursor - argStart);
             buffer.InsertRange(argStart, replacement);
 
@@ -1733,24 +1823,20 @@ namespace fis
             );
 
             // command highlighting
-            if (cmd.Length > 0 && !nocolormode)
+            if (cmd.Length > 0)
             {
-                // exactly correct command
-                if (exact)
-                    SetColor(ConsoleColor.White);
+                if (!nocolormode)
+                {
+                    if (exact)
+                        SetColor(ConsoleColor.White);
+                    else if (partial)
+                        SetColor(ConsoleColor.Yellow);
+                    else
+                        SetColor(ConsoleColor.Red);
+                }
 
-                // unfinished command
-                else if (partial)
-                    SetColor(ConsoleColor.Yellow);
-
-                // invalid command
-                else
-                    SetColor(ConsoleColor.Red);
-
-                var oldFg = Console.ForegroundColor;
-
+                // ALWAYS print the command, even in non-color mode.
                 Console.Write(cmd);
-
                 ResCol();
             }
 
@@ -1813,20 +1899,20 @@ namespace fis
 
             // ghost autocomplete
             if (
+                !nocolormode &&
                 partial &&
                 !exact &&
                 cmd.Length > 0
             )
             {
                 string match = commands.First(c =>
-                    c.StartsWith(cmd, StringComparison.OrdinalIgnoreCase));
+                c.StartsWith(cmd, StringComparison.OrdinalIgnoreCase));
 
                 string remain = match.Substring(cmd.Length);
 
                 SetColor(ConsoleColor.DarkGray);
                 Console.Write(remain);
             }
-
 
             // reset colors before cursor restore
             ResCol();
@@ -1980,8 +2066,10 @@ namespace fis
         static void ResForegroundColor()
         {
             if (nocolormode)
+            {
                 Console.ResetColor();
                 return;
+            }
             Console.ForegroundColor = currentFg;
         }
 
@@ -3640,53 +3728,43 @@ namespace fis
             try { Directory.Delete(sourceDir, true); } catch { }
         }
 
-        static void RunCommand(string[] args)
+        static void RunCommand(string[] args, string rawInput)
         {
             try
             {
                 if (args.Length < 2)
                 {
                     SetColor(ConsoleColor.Cyan);
-                    Console.WriteLine("usage: run/open/launch [args] <file>");
+                    Console.WriteLine("usage: run/open/launch [args] <command>");
                     Console.WriteLine("u can replace [args] with:");
                     Console.WriteLine("/website or /web - launches webpage/website instead of files");
-                    Console.Write("/sudo or /su - launches the file as ");
+                    Console.Write("/sudo or /su - launches as ");
 
-                    if (OperatingSystem.IsLinux())
-                    {
-                        Console.WriteLine("root");
-                    }
-                    else
-                    {
-                        Console.WriteLine("an administrator");
-                    }
+                    Console.WriteLine(
+                        OperatingSystem.IsLinux() ? "root" : "an administrator");
 
-                    Console.WriteLine("or leave empty to run files normally");
+                    Console.WriteLine("or leave empty to run a shell command normally");
                     ResForegroundColor();
                     return;
                 }
 
-                bool useSudo = false;
-                int targetIndex = 1;
+                bool useSudo =
+                args[1].Equals("/sudo", StringComparison.OrdinalIgnoreCase) ||
+                args[1].Equals("/su", StringComparison.OrdinalIgnoreCase);
 
-                // SUDO MODE
-                if (args[1].ToLower() == "/sudo" || args[1].ToLower() == "/su")
+                int targetIndex = useSudo ? 2 : 1;
+
+                if (args.Length <= targetIndex)
                 {
-                    useSudo = true;
-                    targetIndex = 2;
-
-                    if (args.Length < 3)
-                    {
-                        SetColor(ConsoleColor.Red);
-                        Console.WriteLine("u forgot the file bro");
-                        ResForegroundColor();
-                        return;
-                    }
+                    SetColor(ConsoleColor.Red);
+                    Console.WriteLine("u forgot the command bro");
+                    ResForegroundColor();
+                    return;
                 }
 
                 // WEBSITE MODE
-                if (args[targetIndex].ToLower() == "/website" ||
-                    args[targetIndex].ToLower() == "/web")
+                if (args[targetIndex].Equals("/website", StringComparison.OrdinalIgnoreCase) ||
+                    args[targetIndex].Equals("/web", StringComparison.OrdinalIgnoreCase))
                 {
                     if (args.Length <= targetIndex + 1)
                     {
@@ -3698,22 +3776,20 @@ namespace fis
 
                     string website = args[targetIndex + 1];
 
-                    if (!website.StartsWith("http://") &&
-                        !website.StartsWith("https://"))
+                    if (!website.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                        !website.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                     {
                         SetColor(ConsoleColor.Cyan);
-                        Console.WriteLine("u forgr the https:// thing brah");
+                        Console.WriteLine("u forgot the https:// thing brah");
                         Console.WriteLine("press enter or y to auto add");
 
-                        string confirm = Console.ReadLine()?.ToLower() ?? "n";
+                        string confirm = Console.ReadLine()?.ToLowerInvariant() ?? "n";
 
                         if (confirm == "y" || confirm == "")
-                        {
                             website = "https://" + website;
-                        }
                     }
 
-                    Process.Start(new ProcessStartInfo()
+                    Process.Start(new ProcessStartInfo
                     {
                         FileName = website,
                         UseShellExecute = true
@@ -3725,87 +3801,46 @@ namespace fis
                     return;
                 }
 
-                // GET TARGET
-                string target = args[targetIndex];
-
-                if (!Path.IsPathRooted(target))
-                {
-                    target = Path.Combine(currentDir, target);
-                }
-
-                if (!File.Exists(target))
+                // SHELL MODE
+                if (useSudo)
                 {
                     SetColor(ConsoleColor.Red);
-                    Console.WriteLine("file not found/invalid :c");
+                    Console.WriteLine(
+                        "/sudo and /su shell execution aren't implemented yet.");
                     ResForegroundColor();
                     return;
                 }
 
-                // LAUNCH
-                if (useSudo)
+                // Preserve the original command text, including shell quoting.
+                int commandStart = rawInput.IndexOfAny(new[] { ' ', '\t' });
+
+                if (commandStart < 0)
                 {
-                    if (OperatingSystem.IsLinux())
-                    {
-                        // Linux: launch as root
-                        Process.Start(new ProcessStartInfo()
-                        {
-                            FileName = "sudo",
-                            UseShellExecute = false,
-                            ArgumentList =
-                            {
-                                target
-                            }
-                        });
-                    }
-                    else if (OperatingSystem.IsWindows())
-                    {
-                        // Windows: launch as administrator
-                        Process.Start(new ProcessStartInfo()
-                        {
-                            FileName = target,
-                            UseShellExecute = true,
-                            Verb = "runas"
-                        });
-                    }
-                    else
-                    {
-                        SetColor(ConsoleColor.Red);
-                        Console.WriteLine("sudo/admin mode isn't supported on this OS :c");
-                        ResForegroundColor();
-                        return;
-                    }
-
-                    SetColor(ConsoleColor.Cyan);
-
-                    if (OperatingSystem.IsLinux())
-                    {
-                        Console.WriteLine("launched as root successfully :D");
-                    }
-                    else
-                    {
-                        Console.WriteLine("launched as administrator successfully :D");
-                    }
+                    SetColor(ConsoleColor.Red);
+                    Console.WriteLine("where's the command bro");
+                    ResForegroundColor();
+                    return;
                 }
-                else
+
+                string shellCommand = rawInput.Substring(commandStart).TrimStart();
+
+                if (string.IsNullOrWhiteSpace(shellCommand))
                 {
-                    // Normal mode
-                    Process.Start(new ProcessStartInfo()
-                    {
-                        FileName = target,
-                        UseShellExecute = true
-                    });
-
-                    SetColor(ConsoleColor.Cyan);
-                    Console.WriteLine("launched successfully :D");
+                    SetColor(ConsoleColor.Red);
+                    Console.WriteLine("where's the command bro");
+                    ResForegroundColor();
+                    return;
                 }
+
+                RunShellCommand(shellCommand);
+                ResForegroundColor();
             }
             catch (Exception ex)
             {
                 SetColor(ConsoleColor.Red);
                 Console.WriteLine("failed to launch: " + ex.Message);
+                ResForegroundColor();
             }
-
-            ResForegroundColor();
         }
 
         // more goofy miscs
@@ -3906,6 +3941,8 @@ namespace fis
             ResForegroundColor();
         }
 
+        /*
+        // ts is expired now you idiot
         static void MemInfo()
         {
             long mem = GC.GetTotalMemory(false);
@@ -3913,6 +3950,18 @@ namespace fis
             SetColor(ConsoleColor.Yellow);
             Console.WriteLine($"total memory: {mem} KB");
             Console.WriteLine($"managed memory: {mem / 1024} KB");
+            ResForegroundColor();
+        }
+        */
+
+        static void MemInfo()
+        {
+            long mem = GC.GetTotalMemory(false);
+
+            SetColor(ConsoleColor.Yellow);
+            Console.WriteLine($"managed heap: {mem:N0} bytes");
+            Console.WriteLine($"managed heap: {mem / 1024.0:N2} KiB");
+            Console.WriteLine($"managed heap: {mem / (1024.0 * 1024.0):N2} MiB");
             ResForegroundColor();
         }
 
@@ -3961,10 +4010,49 @@ namespace fis
             ResForegroundColor();
         }
 
+        // ts is also expired now
+        /*
         static void Tree(string path, string indent = "")
         {
             string[] dirs = Directory.GetDirectories(path);
             string[] files = Directory.GetFiles(path);
+
+            SetColor(ConsoleColor.Yellow);
+
+            foreach (string dir in dirs)
+            {
+                Console.WriteLine(indent + "├─ " + Path.GetFileName(dir));
+                Tree(dir, indent + "│  ");
+            }
+
+            foreach (string file in files)
+            {
+                Console.WriteLine(indent + "└─ " + Path.GetFileName(file));
+            }
+
+            ResForegroundColor();
+        }
+        */
+
+        static void Tree(string path, string indent = "")
+        {
+            string[] dirs;
+            string[] files;
+
+            try
+            {
+                dirs = Directory.GetDirectories(path);
+                files = Directory.GetFiles(path);
+            }
+            catch (Exception ex) when (
+                ex is IOException ||
+                ex is UnauthorizedAccessException)
+            {
+                SetColor(ConsoleColor.Red);
+                Console.WriteLine($"{indent}[cannot read: {ex.Message}]");
+                ResForegroundColor();
+                return;
+            }
 
             SetColor(ConsoleColor.Yellow);
 
@@ -4306,6 +4394,13 @@ namespace fis
             TypeWrite("- shortend the \"animate\" switch from command \"initfis\" (\"initfis animate\") to \"anim\"");
             Console.ReadKey(true);
             TypeWrite("- added syntax highlighting to the \"touch\" command");
+            Console.ReadKey(true);
+            TypeWrite("- also fixed the syntax hightligting having stroke when no color mode is on");
+            Console.ReadKey(true);
+            TypeWrite("- because i don't wanna waste ur storage for a file that stores alias, the --alias (or simply -a) got removed from v1.9/8");
+            Console.ReadKey(true);
+            TypeWrite("- implemented cmd.exe (or bash shell) into the \"launch\" command so that it doesn't just execute any file and that's it");
+            TypeWrite("cuz i mean... \"launch /usr/bin/firefox example.com\" barely even do shii besides opening up firefox in new tab and not the example.com");
 
             Console.ReadKey(true);
             TypeWrite("- thats it lmao");
