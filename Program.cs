@@ -2723,36 +2723,35 @@ namespace fis
             showDir = !showDir;
         }
 
+
         static void Touch(string[] args)
         {
             if (args.Length < 2)
             {
                 SetColor(ConsoleColor.Cyan);
-                Console.WriteLine("usage: touch (/viewhex) <filename>");
+                Console.WriteLine("usage: touch <filename>");
                 Console.WriteLine("<filename> - name of the file needed to edit\n");
-                Console.WriteLine("(/hex) - optional switch that show hexes of the file instead of unicode chars");
                 SetColor(ConsoleColor.Red);
                 Console.WriteLine("anonnoyingly flashes for every arrow key u press");
                 SetColor(ConsoleColor.Cyan);
                 Console.WriteLine("i hope ur all fine with ur suffering :sob::pray:");
+                SetColor(ConsoleColor.DarkCyan);
+                Console.WriteLine("\nhonorable mention: supports syntax highlighting for most valid file extension today now :D");
                 ResForegroundColor();
                 return;
             }
 
-            bool viewHex = args.Contains("/hex");
-            string filename = string.Join(" ", args.Where(a => a != "/hex").Skip(1)).Trim();
+            string filename = string.Join(" ", args.Skip(1)).Trim();
 
             if (string.IsNullOrWhiteSpace(filename))
             {
                 SetColor(ConsoleColor.Cyan);
-                Console.WriteLine("usage: touch (/viewhex) <filename>");
-                Console.WriteLine("(/hex) - optional switch that show hexes of the file instead of unicode chars");
-
+                Console.WriteLine("usage: touch <filename>");
                 ResForegroundColor();
                 return;
             }
 
-            string path = Path.Combine(currentDir, filename);
+            string path = Path.GetFullPath(Path.Combine(currentDir, filename));
 
             List<string> lines = new List<string>();
 
@@ -2760,49 +2759,311 @@ namespace fis
             {
                 if (File.Exists(path))
                 {
-                    if (viewHex)
-                    {
-                        byte[] bytes = File.ReadAllBytes(path);
-
-                        for (int i = 0; i < bytes.Length; i += 16)
-                        {
-                            var chunk = bytes
-                                .Skip(i)
-                                .Take(16)
-                                .Select(b => b.ToString("X2"));
-
-                            lines.Add(string.Join(" ", chunk));
-                        }
-
-                        if (lines.Count == 0)
-                            lines.Add("");
-                    }
-                    else
-                    {
-                        lines = File.ReadAllLines(path).ToList();
-                    }
+                    lines = File.ReadAllLines(path).ToList();
                 }
                 else
                 {
-                    lines.Add("new file");
+                    lines.Add("");
                 }
 
-                ResForegroundColor();
+                // empty files are allowed, but the editor needs somewhere to put the cursor
+                if (lines.Count == 0)
+                    lines.Add("");
 
                 int cursorX = 0;
                 int cursorY = 0;
                 int scrollOffset = 0;
+                bool dirty = false;
 
-                bool highNibble = true;
+                string extension = Path.GetExtension(path).ToLowerInvariant();
 
-                bool IsHexChar(char c)
+                // not every file has an extension we recognize, and thats fine
+                bool pythonLike = new[]
                 {
-                    return Uri.IsHexDigit(c);
+                    ".py", ".pyw", ".sh", ".bash", ".fish",
+                    ".yml", ".yaml", ".toml", ".r", ".rb",
+                    ".pl", ".pm", ".conf", ".ini", ".properties"
+                }.Contains(extension);
+
+                bool hashComments = pythonLike ||
+                new[] { ".ps1", ".psm1", ".psd1" }.Contains(extension);
+
+                bool slashComments = new[]
+                {
+                    ".cs", ".java", ".js", ".jsx", ".ts", ".tsx",
+                    ".c", ".h", ".cpp", ".hpp", ".cc", ".hh",
+                    ".go", ".rs", ".swift", ".kt", ".kts",
+                    ".dart", ".scala", ".php", ".css", ".scss",
+                    ".less", ".jsonc", ".gradle", ".groovy",
+                    ".sql", ".lua", ".m", ".mm"
+                }.Contains(extension);
+
+                bool htmlComments = new[]
+                {
+                    ".html", ".htm", ".xml", ".svg", ".xhtml"
+                }.Contains(extension);
+
+                bool sqlComments = extension == ".sql";
+
+                // keywords are grouped by language so a random .1 file still works
+                HashSet<string> keywords = new HashSet<string>(
+                    StringComparer.Ordinal
+                );
+
+                if (new[] { ".cs", ".java", ".c", ".h", ".cpp", ".hpp",
+                    ".cc", ".hh", ".kt", ".kts", ".scala", ".swift" }
+                    .Contains(extension))
+                {
+                    keywords.UnionWith((
+                        "abstract as async await base bool break byte case " +
+                        "catch char checked class const continue decimal default " +
+                        "delegate do double else enum event explicit extern false " +
+                        "finally fixed float for foreach goto if implicit in int " +
+                        "interface internal is lock long namespace new null object " +
+                        "operator out override params private protected public " +
+                        "readonly record ref return sbyte sealed short sizeof stackalloc " +
+                        "static string struct switch this throw true try typeof uint " +
+                        "ulong unchecked unsafe ushort using var virtual void volatile " +
+                        "while get set init required yield package import extends " +
+                        "implements super throws final native synchronized transient"
+                    ).Split(' ', StringSplitOptions.RemoveEmptyEntries));
+                }
+                else if (new[] { ".py", ".pyw" }.Contains(extension))
+                {
+                    keywords.UnionWith((
+                        "and as assert async await break class continue def del elif " +
+                        "else except finally for from global if import in is lambda " +
+                        "nonlocal not or pass raise return try while with yield " +
+                        "False None True self"
+                    ).Split(' ', StringSplitOptions.RemoveEmptyEntries));
+                }
+                else if (new[] { ".js", ".jsx", ".ts", ".tsx", ".mjs",
+                    ".cjs" }.Contains(extension))
+                {
+                    keywords.UnionWith((
+                        "async await break case catch class const continue debugger " +
+                        "default delete do else export extends false finally for " +
+                        "from function if import in instanceof let new null of return " +
+                        "static super switch this throw true try typeof undefined " +
+                        "var void while with yield interface type enum implements " +
+                        "private protected public readonly abstract declare"
+                    ).Split(' ', StringSplitOptions.RemoveEmptyEntries));
+                }
+                else if (extension == ".json" || extension == ".jsonc")
+                {
+                    keywords.UnionWith(new[] { "true", "false", "null" });
+                }
+                else if (extension == ".sql")
+                {
+                    keywords.UnionWith((
+                        "ADD ALL ALTER AND AS ASC BEGIN BETWEEN BY CASE CAST CHECK " +
+                        "COLUMN COMMIT CONSTRAINT CREATE CROSS DATABASE DEFAULT DELETE " +
+                        "DESC DISTINCT DROP ELSE END EXCEPT EXISTS FOREIGN FROM FULL " +
+                        "GROUP HAVING IN INDEX INNER INSERT INTO IS JOIN KEY LEFT LIKE " +
+                        "LIMIT NOT NULL OFFSET ON OR ORDER OUTER PRIMARY REFERENCES " +
+                        "RIGHT ROLLBACK SELECT SET TABLE THEN TOP TRANSACTION UNION " +
+                        "UNIQUE UPDATE VALUES VIEW WHEN WHERE WITH"
+                    ).Split(' ', StringSplitOptions.RemoveEmptyEntries));
+                }
+                else if (extension == ".html" || extension == ".htm" ||
+                    extension == ".xml" || extension == ".svg")
+                {
+                    keywords.UnionWith((
+                        "html head body title meta link script style div span p a " +
+                        "img input button form label main section article header " +
+                        "footer nav ul ol li table tr td th h1 h2 h3 h4 h5 h6 " +
+                        "doctype xmlns svg path rect circle"
+                    ).Split(' ', StringSplitOptions.RemoveEmptyEntries));
+                }
+                else if (extension == ".css" || extension == ".scss" ||
+                    extension == ".less")
+                {
+                    keywords.UnionWith((
+                        "important inherit initial unset revert none auto block " +
+                        "inline flex grid absolute relative fixed sticky hidden " +
+                        "solid dashed dotted transparent currentColor"
+                    ).Split(' ', StringSplitOptions.RemoveEmptyEntries));
+                }
+                else if (extension == ".md" || extension == ".markdown")
+                {
+                    keywords.UnionWith(new[]
+                    {
+                        "#", "##", "###", "####", "#####", "######"
+                    });
+                }
+                else if (extension == ".sh" || extension == ".bash" ||
+                    extension == ".fish")
+                {
+                    keywords.UnionWith((
+                        "if then else elif fi for while do done case esac in " +
+                        "function return exit export local readonly unset source " +
+                        "set echo printf read cd pwd eval exec test"
+                    ).Split(' ', StringSplitOptions.RemoveEmptyEntries));
                 }
 
-                char NormalizeHex(char c)
+                // this one does the actual highlighting, not some fake rainbow effect
+                void WriteHighlightedLine(string text)
                 {
-                    return char.ToUpper(c);
+                    int i = 0;
+
+                    while (i < text.Length)
+                    {
+                        // comments get the gray treatment
+                        bool isComment = false;
+
+                        if (htmlComments && text.AsSpan(i).StartsWith("<!--"))
+                        {
+                            int end = text.IndexOf("-->", i, StringComparison.Ordinal);
+                            int count = end < 0 ? text.Length - i : end + 3 - i;
+
+                            SetColor(ConsoleColor.DarkGreen);
+                            Console.Write(text.Substring(i, count));
+                            ResForegroundColor();
+                            i += count;
+                            continue;
+                        }
+
+                        if (slashComments &&
+                            (text.AsSpan(i).StartsWith("//") ||
+                            (sqlComments && text.AsSpan(i).StartsWith("--"))))
+                        {
+                            isComment = true;
+                        }
+
+                        if (hashComments && text[i] == '#')
+                            isComment = true;
+
+                        if (isComment)
+                        {
+                            SetColor(ConsoleColor.DarkGreen);
+                            Console.Write(text.Substring(i));
+                            ResForegroundColor();
+                            break;
+                        }
+
+                        // strings, including the quotes themselves
+                        if (text[i] == '"' || text[i] == '\'' ||
+                            (text[i] == '`' &&
+                            new[] { ".js", ".jsx", ".ts", ".tsx", ".mjs",
+                                ".cjs" }.Contains(extension)))
+                        {
+                            char quote = text[i];
+                            int start = i++;
+                            bool escaped = false;
+
+                            while (i < text.Length)
+                            {
+                                char c = text[i++];
+
+                                if (escaped)
+                                {
+                                    escaped = false;
+                                    continue;
+                                }
+
+                                if (c == '\\')
+                                {
+                                    escaped = true;
+                                    continue;
+                                }
+
+                                if (c == quote)
+                                    break;
+                            }
+
+                            SetColor(ConsoleColor.Yellow);
+                            Console.Write(text.Substring(start, i - start));
+                            ResForegroundColor();
+                            continue;
+                        }
+
+                        // numbers, because staring at uncolored numbers is apparently illegal
+                        if (char.IsDigit(text[i]) &&
+                            (i == 0 || !char.IsLetterOrDigit(text[i - 1]) &&
+                            text[i - 1] != '_'))
+                        {
+                            int start = i++;
+
+                            while (i < text.Length &&
+                                (char.IsLetterOrDigit(text[i]) ||
+                                text[i] == '.' || text[i] == '_' ||
+                                text[i] == '+' || text[i] == '-'))
+                            {
+                                if ((text[i] == '+' || text[i] == '-') &&
+                                    text[i - 1] != 'e' && text[i - 1] != 'E')
+                                    break;
+
+                                i++;
+                            }
+
+                            SetColor(ConsoleColor.Magenta);
+                            Console.Write(text.Substring(start, i - start));
+                            ResForegroundColor();
+                            continue;
+                        }
+
+                        // identifiers / keywords
+                        if (char.IsLetter(text[i]) || text[i] == '_' ||
+                            text[i] == '$')
+                        {
+                            int start = i++;
+
+                            while (i < text.Length &&
+                                (char.IsLetterOrDigit(text[i]) ||
+                                text[i] == '_' || text[i] == '$'))
+                            {
+                                i++;
+                            }
+
+                            string word = text.Substring(start, i - start);
+
+                            if (keywords.Contains(word) ||
+                                (extension == ".sql" &&
+                                keywords.Contains(word.ToUpperInvariant())))
+                            {
+                                SetColor(ConsoleColor.Cyan);
+                                Console.Write(word);
+                                ResForegroundColor();
+                            }
+                            else if (word == "TODO" || word == "FIXME" ||
+                                word == "NOTE" || word == "HACK")
+                            {
+                                SetColor(ConsoleColor.Red);
+                                Console.Write(word);
+                                ResForegroundColor();
+                            }
+                            else
+                            {
+                                Console.Write(word);
+                            }
+
+                            continue;
+                        }
+
+                        // markdown headings get a little attention too
+                        if ((extension == ".md" || extension == ".markdown") &&
+                            text[i] == '#' && (i == 0 || text[i - 1] == ' '))
+                        {
+                            int start = i;
+
+                            while (i < text.Length && text[i] == '#')
+                                i++;
+
+                            SetColor(ConsoleColor.Cyan);
+                            Console.Write(text.Substring(start, i - start));
+                            ResForegroundColor();
+                            continue;
+                        }
+
+                        Console.Write(text[i]);
+                        i++;
+                    }
+                }
+
+                void SaveFile()
+                {
+                    File.WriteAllLines(path, lines);
+                    dirty = false;
                 }
 
                 Console.Clear();
@@ -2814,78 +3075,48 @@ namespace fis
 
                     int winW = Console.WindowWidth;
                     int winH = Console.WindowHeight;
-                    int visibleHeight = winH - 2;
+                    int visibleHeight = Math.Max(1, winH - 2);
 
-                    // clamp cursor
-                    cursorY = Math.Max(0, Math.Min(cursorY, lines.Count - 1));
-                    cursorX = Math.Max(0, Math.Min(cursorX, lines[cursorY].Length));
+                    cursorY = Math.Clamp(cursorY, 0, lines.Count - 1);
+                    cursorX = Math.Clamp(cursorX, 0, lines[cursorY].Length);
 
-                    Console.Clear();
+                    if (cursorY < scrollOffset)
+                        scrollOffset = cursorY;
 
-                    // =========================
-                    // render text area
-                    // =========================
+                    if (cursorY >= scrollOffset + visibleHeight)
+                        scrollOffset = cursorY - visibleHeight + 1;
+
+                    Console.SetCursorPosition(0, 0);
+
+                    // render text area (pls dont let the terminal wrap this again)
                     for (int i = 0; i < visibleHeight; i++)
                     {
                         int lineIndex = i + scrollOffset;
-
                         Console.SetCursorPosition(0, i);
 
-                        string text = "";
+                        string text = lineIndex < lines.Count
+                        ? lines[lineIndex]
+                        : "";
 
-                        if (lineIndex < lines.Count)
-                            text = lines[lineIndex];
+                        // reserve the last column so writing doesn't trigger terminal wrapping
+                        int maxWidth = Math.Max(0, winW - 1);
+                        string visibleText = text.Length > maxWidth
+                        ? text.Substring(0, maxWidth)
+                        : text;
 
-                        if (text.Length > winW)
-                            text = text.Substring(0, winW);
+                        WriteHighlightedLine(visibleText);
 
-                        if (viewHex)
-                        {
-                            string ascii = "";
-
-                            string[] hexes =
-                                text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-                            foreach (string h in hexes)
-                            {
-                                try
-                                {
-                                    byte b = Convert.ToByte(h, 16);
-
-                                    ascii +=
-                                        (b >= 32 && b <= 126)
-                                        ? (char)b
-                                        : '.';
-                                }
-                                catch
-                                {
-                                    ascii += '.';
-                                }
-                            }
-
-                            string combined =
-                                text.PadRight(16 * 3 + 4) + ascii;
-
-                            if (combined.Length > winW)
-                                combined = combined.Substring(0, winW);
-
-                            Console.Write(combined.PadRight(winW));
-                        }
-                        else
-                        {
-                            Console.Write(text.PadRight(winW));
-                        }
+                        int padding = maxWidth - visibleText.Length;
+                        if (padding > 0)
+                            Console.Write(new string(' ', padding));
                     }
 
-                    // =========================
                     // status bar
-                    // =========================
                     Console.SetCursorPosition(0, winH - 2);
                     SetColor(ConsoleColor.DarkGray);
 
-                    string mode = viewHex ? "[HEX]" : "[TEXT]";
                     string status =
-                        $"{mode} ESC = quit | CTRL + S = save | CTRL + X or :wq = save & quit | line {cursorY + 1}/{lines.Count}";
+                    $" TOUCH | {(dirty ? "modified" : "saved")} | ESC quit | Ctrl+S save | Ctrl+X save & quit | line {cursorY + 1}/{lines.Count}";
 
                     if (status.Length > winW)
                         status = status.Substring(0, winW);
@@ -2893,99 +3124,48 @@ namespace fis
                     Console.Write(status.PadRight(winW));
                     ResForegroundColor();
 
-                    // =========================
-                    // cursor draw
-                    // =========================
-                    int drawY = cursorY - scrollOffset;
+                    Console.SetCursorPosition(0, winH - 1);
+                    SetColor(ConsoleColor.DarkGray);
+                    Console.Write($" {Path.GetFileName(path)}".PadRight(winW));
+                    ResForegroundColor();
 
-                    if (drawY >= 0 && drawY < visibleHeight)
-                    {
-                        int drawX = Math.Min(cursorX, winW - 1);
-                        Console.SetCursorPosition(drawX, drawY);
-                    }
+                    // cursor position is based on the actual text, not the cropped display
+                    int drawY = cursorY - scrollOffset;
+                    int drawX = Math.Min(cursorX, Math.Max(0, winW - 1));
+
+                    Console.SetCursorPosition(drawX, drawY);
 
                     var key = Console.ReadKey(true);
 
-                    // ESC quit no save
+                    // ESC still means "get me outta here"
                     if (key.Key == ConsoleKey.Escape)
                     {
                         Console.Clear();
-                        Console.WriteLine("exited without saving :skull:");
+                        Console.WriteLine(dirty
+                        ? "exited without saving :skull:"
+                        : "exited :D");
+                        ResForegroundColor();
                         return;
                     }
 
-                    // Ctrl+S save
+                    // Ctrl+S = save
                     if (key.Key == ConsoleKey.S &&
                         key.Modifiers.HasFlag(ConsoleModifiers.Control))
                     {
-                        if (viewHex)
-                        {
-                            List<byte> outBytes = new List<byte>();
-
-                            foreach (string line in lines)
-                            {
-                                string[] hexes = line
-                                    .Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-                                foreach (string h in hexes)
-                                {
-                                    try
-                                    {
-                                        outBytes.Add(Convert.ToByte(h, 16));
-                                    }
-                                    catch { }
-                                }
-                            }
-
-                            File.WriteAllBytes(path, outBytes.ToArray());
-                        }
-                        else
-                        {
-                            File.WriteAllLines(path, lines);
-                        }
+                        SaveFile();
 
                         Console.SetCursorPosition(0, winH - 1);
                         SetColor(ConsoleColor.Cyan);
-
-                        string msg = "[saved with Ctrl+S :D]";
-                        if (msg.Length > winW)
-                            msg = msg.Substring(0, winW);
-
-                        Console.Write(msg.PadRight(winW));
+                        Console.Write("[saved with Ctrl+S :D]".PadRight(winW));
                         ResForegroundColor();
                         continue;
                     }
 
-                    // Ctrl+X save quit
+                    // Ctrl+X = save and quit
                     if (key.Key == ConsoleKey.X &&
                         key.Modifiers.HasFlag(ConsoleModifiers.Control))
                     {
-                        if (viewHex)
-                        {
-                            List<byte> outBytes = new List<byte>();
-
-                            foreach (string line in lines)
-                            {
-                                string[] hexes = line
-                                    .Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-                                foreach (string h in hexes)
-                                {
-                                    try
-                                    {
-                                        outBytes.Add(Convert.ToByte(h, 16));
-                                    }
-                                    catch { }
-                                }
-                            }
-
-                            File.WriteAllBytes(path, outBytes.ToArray());
-                        }
-                        else
-                        {
-                            File.WriteAllLines(path, lines);
-                        }
-
+                        SaveFile();
                         Console.Clear();
                         SetColor(ConsoleColor.Cyan);
                         Console.WriteLine("saved & exited :D");
@@ -2993,47 +3173,111 @@ namespace fis
                         return;
                     }
 
-                    // ENTER
+                    // HOME = beginning of line, END = end of line
+                    if (key.Key == ConsoleKey.Home)
+                    {
+                        cursorX = 0;
+                        continue;
+                    }
+
+                    if (key.Key == ConsoleKey.End)
+                    {
+                        cursorX = lines[cursorY].Length;
+                        continue;
+                    }
+
+                    // pgup / pgdown = move by the visible screen height
+                    if (key.Key == ConsoleKey.PageUp)
+                    {
+                        cursorY = Math.Max(0, cursorY - visibleHeight);
+                        cursorX = Math.Min(cursorX, lines[cursorY].Length);
+                        continue;
+                    }
+
+                    if (key.Key == ConsoleKey.PageDown)
+                    {
+                        cursorY = Math.Min(lines.Count - 1, cursorY + visibleHeight);
+                        cursorX = Math.Min(cursorX, lines[cursorY].Length);
+                        continue;
+                    }
+
+                    // ctrl + left/right = jump between words
+                    if (key.Key == ConsoleKey.LeftArrow &&
+                        key.Modifiers.HasFlag(ConsoleModifiers.Control))
+                    {
+                        if (cursorX > 0)
+                        {
+                            while (cursorX > 0 &&
+                                char.IsWhiteSpace(lines[cursorY][cursorX - 1]))
+                                cursorX--;
+
+                            while (cursorX > 0 &&
+                                (char.IsLetterOrDigit(lines[cursorY][cursorX - 1]) ||
+                                lines[cursorY][cursorX - 1] == '_'))
+                                cursorX--;
+
+                            if (cursorX > 0 &&
+                                !char.IsWhiteSpace(lines[cursorY][cursorX - 1]))
+                                cursorX--;
+                        }
+                        else if (cursorY > 0)
+                        {
+                            cursorY--;
+                            cursorX = lines[cursorY].Length;
+                        }
+
+                        continue;
+                    }
+
+                    if (key.Key == ConsoleKey.RightArrow &&
+                        key.Modifiers.HasFlag(ConsoleModifiers.Control))
+                    {
+                        string line = lines[cursorY];
+
+                        if (cursorX < line.Length)
+                        {
+                            while (cursorX < line.Length &&
+                                (char.IsLetterOrDigit(line[cursorX]) ||
+                                line[cursorX] == '_'))
+                                cursorX++;
+
+                            while (cursorX < line.Length &&
+                                char.IsWhiteSpace(line[cursorX]))
+                                cursorX++;
+
+                            if (cursorX < line.Length &&
+                                !char.IsLetterOrDigit(line[cursorX]) &&
+                                line[cursorX] != '_')
+                                cursorX++;
+                        }
+                        else if (cursorY < lines.Count - 1)
+                        {
+                            cursorY++;
+                            cursorX = 0;
+                        }
+
+                        continue;
+                    }
+
+                    // ENTER = new line, or :wq if u feel like being a vim user
                     if (key.Key == ConsoleKey.Enter)
                     {
-                        string currentLine = lines[cursorY];
-
-                        if (currentLine.Trim() == ":wq")
+                        if (lines[cursorY].Trim() == ":wq")
                         {
                             lines.RemoveAt(cursorY);
-                            if (viewHex)
-                            {
-                                List<byte> outBytes = new List<byte>();
 
-                                foreach (string line in lines)
-                                {
-                                    string[] hexes = line
-                                        .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                            if (lines.Count == 0)
+                                lines.Add("");
 
-                                    foreach (string h in hexes)
-                                    {
-                                        try
-                                        {
-                                            outBytes.Add(Convert.ToByte(h, 16));
-                                        }
-                                        catch { }
-                                    }
-                                }
-
-                                File.WriteAllBytes(path, outBytes.ToArray());
-                            }
-                            else
-                            {
-                                File.WriteAllLines(path, lines);
-                            }
-
+                            SaveFile();
                             Console.Clear();
                             SetColor(ConsoleColor.Cyan);
-                            Console.WriteLine("saved :D");
+                            Console.WriteLine("saved & exited :D");
                             ResForegroundColor();
                             return;
                         }
 
+                        string currentLine = lines[cursorY];
                         string left = currentLine.Substring(0, cursorX);
                         string right = currentLine.Substring(cursorX);
 
@@ -3042,141 +3286,121 @@ namespace fis
 
                         cursorY++;
                         cursorX = 0;
+                        dirty = true;
+                        continue;
                     }
 
-                    // BACKSPACE
-                    else if (key.Key == ConsoleKey.Backspace)
+                    // BACKSPACE = delete left, merge lines if necessary
+                    if (key.Key == ConsoleKey.Backspace)
                     {
-                        if (viewHex)
+                        if (cursorX > 0)
                         {
-                            string[] hexes = lines[cursorY]
-                                .Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-                            int byteIndex = cursorX / 3;
-
-                            // clamp
-                            if (byteIndex >= 0 && byteIndex < hexes.Length)
-                            {
-                                hexes[byteIndex] = "00";
-                            }
-
-                            // rebuild clean formatting
                             lines[cursorY] =
-                                string.Join(" ", hexes) + " ";
+                            lines[cursorY].Remove(cursorX - 1, 1);
 
-                            // move cursor to start of deleted byte
-                            cursorX = byteIndex * 3;
-
-                            highNibble = true;
+                            cursorX--;
+                            dirty = true;
                         }
-                        else
+                        else if (cursorY > 0)
                         {
-                            if (cursorX > 0)
-                            {
-                                lines[cursorY] =
-                                    lines[cursorY].Remove(cursorX - 1, 1);
+                            int prevLen = lines[cursorY - 1].Length;
 
-                                cursorX--;
-                            }
-                            else if (cursorY > 0)
-                            {
-                                int prevLen = lines[cursorY - 1].Length;
+                            lines[cursorY - 1] += lines[cursorY];
+                            lines.RemoveAt(cursorY);
 
-                                lines[cursorY - 1] += lines[cursorY];
-                                lines.RemoveAt(cursorY);
-
-                                cursorY--;
-                                cursorX = prevLen;
-                            }
+                            cursorY--;
+                            cursorX = prevLen;
+                            dirty = true;
                         }
+
+                        continue;
                     }
 
-                    // LEFT
-                    else if (key.Key == ConsoleKey.LeftArrow)
+                    // DELETE = delete right, merge lines if necessary
+                    if (key.Key == ConsoleKey.Delete)
+                    {
+                        if (cursorX < lines[cursorY].Length)
+                        {
+                            lines[cursorY] =
+                            lines[cursorY].Remove(cursorX, 1);
+
+                            dirty = true;
+                        }
+                        else if (cursorY < lines.Count - 1)
+                        {
+                            lines[cursorY] += lines[cursorY + 1];
+                            lines.RemoveAt(cursorY + 1);
+                            dirty = true;
+                        }
+
+                        continue;
+                    }
+
+                    // LEFT / RIGHT
+                    if (key.Key == ConsoleKey.LeftArrow)
                     {
                         if (cursorX > 0)
                             cursorX--;
+                        else if (cursorY > 0)
+                        {
+                            cursorY--;
+                            cursorX = lines[cursorY].Length;
+                        }
+
+                        continue;
                     }
 
-                    // RIGHT
-                    else if (key.Key == ConsoleKey.RightArrow)
+                    if (key.Key == ConsoleKey.RightArrow)
                     {
                         if (cursorX < lines[cursorY].Length)
                             cursorX++;
+                        else if (cursorY < lines.Count - 1)
+                        {
+                            cursorY++;
+                            cursorX = 0;
+                        }
+
+                        continue;
                     }
 
-                    // UP
-                    else if (key.Key == ConsoleKey.UpArrow)
+                    // UP / DOWN
+                    if (key.Key == ConsoleKey.UpArrow)
                     {
                         if (cursorY > 0)
                         {
                             cursorY--;
                             cursorX = Math.Min(cursorX, lines[cursorY].Length);
                         }
+
+                        continue;
                     }
 
-                    // DOWN
-                    else if (key.Key == ConsoleKey.DownArrow)
+                    if (key.Key == ConsoleKey.DownArrow)
                     {
                         if (cursorY < lines.Count - 1)
                         {
                             cursorY++;
                             cursorX = Math.Min(cursorX, lines[cursorY].Length);
                         }
+
+                        continue;
                     }
 
-                    // TEXT INPUT
-                    else if (viewHex && IsHexChar(key.KeyChar))
-                    {
-                        char hex = NormalizeHex(key.KeyChar);
-
-                        while (lines[cursorY].Length <= cursorX)
-                            lines[cursorY] += "00 ";
-
-                        char[] chars = lines[cursorY].ToCharArray();
-
-                        chars[cursorX] = hex;
-
-                        lines[cursorY] = new string(chars);
-
-                        if (highNibble)
-                        {
-                            highNibble = false;
-                            cursorX++;
-                        }
-                        else
-                        {
-                            highNibble = true;
-
-                            cursorX += 2;
-
-                            // auto extend line spacing
-                            if (cursorX > lines[cursorY].Length)
-                                lines[cursorY] += "00 ";
-                        }
-                    }
-                    else if (!viewHex && !char.IsControl(key.KeyChar))
+                    // the infamous hex view from older v1.x beta is obselette due to complicated errors that mr.chatgpt can't solve
+                    if (!char.IsControl(key.KeyChar))
                     {
                         lines[cursorY] =
-                            lines[cursorY].Insert(cursorX, key.KeyChar.ToString());
+                        lines[cursorY].Insert(cursorX, key.KeyChar.ToString());
 
                         cursorX++;
+                        dirty = true;
                     }
-
-                    // =========================
-                    // auto scroll
-                    // =========================
-                    if (cursorY >= scrollOffset + visibleHeight)
-                        scrollOffset = cursorY - visibleHeight + 1;
-
-                    if (cursorY < scrollOffset)
-                        scrollOffset = cursorY;
                 }
             }
             catch (Exception ex)
             {
                 SetColor(ConsoleColor.Red);
-                Console.WriteLine($"failed to save file: {ex.Message}");
+                Console.WriteLine($"failed to edit file: {ex.Message}");
                 ResForegroundColor();
             }
         }
@@ -4385,7 +4609,7 @@ namespace fis
             Console.ReadKey(true);
             TypeWrite("- NEW COMMAND: man (seek the \"help\" command to find out how it works)");
             Console.ReadKey(true);
-            TypeWrite("- made rm rejects the infamous -rf / on linux");
+            TypeWrite("- made rm rejects the infamous -rf / on linux (and C: for windows)");
             Console.ReadKey(true);
             TypeWrite("- obliterated the requirement label off the version shower (the \"ver\" command, yk?)");
             Console.ReadKey(true);
@@ -4401,6 +4625,9 @@ namespace fis
             Console.ReadKey(true);
             TypeWrite("- implemented cmd.exe (or bash shell) into the \"launch\" command so that it doesn't just execute any file and that's it");
             TypeWrite("cuz i mean... \"launch /usr/bin/firefox example.com\" barely even do shii besides opening up firefox in new tab and not the example.com");
+            TypeWrite("and yes /sudo (or /su) from \"launch\" command is also present");
+            Console.ReadKey(true);
+            TypeWrite("- the /hex switch from the \"touch\" command is now obselette\ndue to complicated errors that mr.chatgpt couldn't solve");
 
             Console.ReadKey(true);
             TypeWrite("- thats it lmao");
