@@ -16,8 +16,6 @@ made entirely using the default csharp language
 bye :D
 
 more than 7.5 thousand worth of lines :sob::pray: (honorable mention: all made by chatgpt and a 13 yo teenager named swindow)
-
-just a reminder for you swindow, update the RunCommand() void alr
 */
 
 using System;
@@ -164,7 +162,8 @@ namespace fis
             using var process = new Process { StartInfo = startInfo };
 
             SetColor(ConsoleColor.Cyan);
-            Console.WriteLine("press ctrl+c to fuckass the program");
+            Console.WriteLine("press ctrl+c to fuck the program");
+            Console.ResetColor();
 
             ConsoleCancelEventHandler cancelHandler = (sender, e) =>
             {
@@ -1452,6 +1451,7 @@ namespace fis
             int cursor = 0;
 
             string tabPrefix = "";
+            string tabCurrentSelection = "";
             List<string> tabMatches = new();
             int tabIndex = -1;
 
@@ -1471,10 +1471,12 @@ namespace fis
                 // enter
                 if (key.Key == ConsoleKey.Enter)
                 {
-                    ResForegroundColor();
-                    Console.WriteLine();
-
                     string result = new string(buffer.ToArray());
+
+                    ResForegroundColor();
+                    SetColor(currentBg, true);
+
+                    Console.WriteLine();
 
                     inputStartTop = Console.CursorTop;
 
@@ -1495,25 +1497,49 @@ namespace fis
                 {
                     string current = new string(buffer.ToArray());
 
-                    var match = commands.FirstOrDefault(c =>
-                        c.StartsWith(current) &&
-                        c != current
-                    );
+                    // accept a filesystem ghost suggestion first
+                    if (cursor == buffer.Count && !nocolormode)
+                    {
+                        var fileGhost = GetFileGhost(current);
 
-                    // accept ghost suggestion
+                        if (fileGhost.HasValue &&
+                            !string.IsNullOrEmpty(fileGhost.Value.Ghost))
+                        {
+                            buffer.RemoveRange(
+                                fileGhost.Value.Start,
+                                buffer.Count - fileGhost.Value.Start);
+
+                            buffer.InsertRange(
+                                fileGhost.Value.Start,
+                                fileGhost.Value.Replacement);
+
+                            cursor = buffer.Count;
+                            tabPrefix = "";
+                            tabMatches.Clear();
+                            tabIndex = -1;
+
+                            tabCurrentSelection = "";
+                            RedrawLine(buffer, cursor);
+                            continue;
+                        }
+                    }
+
+                    // existing command autocomplete
+                    var match = commands.FirstOrDefault(c =>
+                    c.StartsWith(current, StringComparison.OrdinalIgnoreCase) &&
+                    c != current);
+
                     if (cursor == buffer.Count && match != null)
                     {
                         buffer = match.ToList();
                         cursor = buffer.Count;
-
+                        tabCurrentSelection = "";
                         RedrawLine(buffer, cursor);
                     }
-
-                    // normal cursor movement
                     else if (cursor < buffer.Count)
                     {
                         cursor++;
-
+                        tabCurrentSelection = "";
                         RedrawLine(buffer, cursor);
                     }
                 }
@@ -1540,6 +1566,7 @@ namespace fis
                     if (cursor < buffer.Count)
                     {
                         tabPrefix = "";
+                        tabCurrentSelection = "";
                         tabMatches.Clear();
                         tabIndex = -1;
 
@@ -1605,7 +1632,13 @@ namespace fis
                 // [TAB] directory/file autocomplete
                 else if (key.Key == ConsoleKey.Tab)
                 {
-                    TabComplete(ref buffer, ref cursor, ref tabPrefix, ref tabMatches, ref tabIndex);
+                    TabComplete(
+                        ref buffer,
+                        ref cursor,
+                        ref tabPrefix,
+                        ref tabCurrentSelection,
+                        ref tabMatches,
+                        ref tabIndex);
                 }
 
                 // [CTRL] + [L] cls logic
@@ -1624,6 +1657,7 @@ namespace fis
                 else if (!char.IsControl(key.KeyChar))
                 {
                     tabPrefix = "";
+                    tabCurrentSelection = "";
                     tabMatches.Clear();
                     tabIndex = -1;
 
@@ -1635,45 +1669,139 @@ namespace fis
             }
         }
 
+        // filesystem finder for the current input
+        static (int Start, string Replacement, string Ghost)? GetFileGhost(
+            string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return null;
+
+            // Only show ghost text when the cursor is at the end.
+            int start = input.LastIndexOf(' ') + 1;
+            string typed = input.Substring(start);
+
+            if (typed.Length == 0)
+                return null;
+
+            bool quoted = typed.StartsWith("\"");
+            string search = quoted ? typed.Substring(1) : typed;
+
+            string combined = Path.IsPathRooted(search)
+            ? search
+            : Path.Combine(currentDir, search);
+
+            string directory;
+            string prefix;
+
+            if (Directory.Exists(combined))
+            {
+                directory = combined;
+                prefix = "";
+            }
+            else
+            {
+                directory = Path.GetDirectoryName(combined) ?? currentDir;
+                prefix = Path.GetFileName(combined);
+            }
+
+            if (!Directory.Exists(directory))
+                return null;
+
+            try
+            {
+                string? match = Directory
+                .GetFileSystemEntries(directory)
+                .Select(Path.GetFileName)
+                .Where(name =>
+                name.StartsWith(
+                    prefix,
+                    StringComparison.OrdinalIgnoreCase))
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(name =>
+                !string.Equals(
+                    name, prefix,
+                    StringComparison.OrdinalIgnoreCase));
+
+                if (match == null)
+                    return null;
+
+                string typedDirectory = Path.GetDirectoryName(search) ?? "";
+                string candidate = string.IsNullOrEmpty(typedDirectory)
+                ? match
+                : Path.Combine(typedDirectory, match);
+
+                bool isDirectory = Directory.Exists(
+                    Path.IsPathRooted(candidate)
+                    ? candidate
+                    : Path.Combine(currentDir, candidate));
+
+                if (isDirectory)
+                    candidate += Path.DirectorySeparatorChar;
+
+                // Quote paths containing spaces when accepting the completion.
+                string replacement = candidate.Contains(' ')
+                ? "\"" + candidate.TrimEnd(
+                    Path.DirectorySeparatorChar) + "\""
+                    : candidate;
+
+                    // A quoted prefix already has an opening quote in the input.
+                    if (quoted)
+                        replacement = candidate + (isDirectory ? "" : "\"");
+
+                string ghost = candidate.Substring(
+                    Math.Min(search.Length, candidate.Length));
+
+                return (start, replacement, ghost);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         // tab completion helper void for ReadCommand()
         static void TabComplete(
             ref List<char> buffer,
             ref int cursor,
             ref string tabPrefix,
+            ref string tabCurrentSelection,
             ref List<string> tabMatches,
             ref int tabIndex)
         {
             string input = new string(buffer.ToArray());
 
-            // Only autocomplete the text BEFORE the cursor
             string beforeCursor = input.Substring(0, cursor);
-
-            // Find the beginning of the current argument
             int argStart = beforeCursor.LastIndexOf(' ') + 1;
-
             string typed = beforeCursor.Substring(argStart);
 
-            // don't autocomplete empty command itself
-            if (argStart == 0 && !typed.Contains("/") && !typed.Contains("\\"))
+            if (string.IsNullOrEmpty(typed))
                 return;
 
-            // if this is a new [TAB] cycle, find matches
-            if (tabPrefix != typed || tabMatches.Count == 0)
+            bool cycling =
+            tabMatches.Count > 0 &&
+            tabIndex >= 0 &&
+            string.Equals(
+                typed,
+                tabCurrentSelection,
+                StringComparison.Ordinal);
+
+            if (!cycling)
             {
                 tabPrefix = typed;
+                tabCurrentSelection = "";
                 tabIndex = -1;
+                tabMatches.Clear();
 
-                string searchPath = typed;
-
-                // Remove quotes temporarily
-                searchPath = searchPath.Trim('"');
+                string searchPath = typed.Trim('"');
 
                 string directory;
                 string prefix;
 
                 if (Path.IsPathRooted(searchPath))
                 {
-                    directory = Path.GetDirectoryName(searchPath);
+                    directory = Path.GetDirectoryName(searchPath)
+                    ?? currentDir;
+
                     prefix = Path.GetFileName(searchPath);
                 }
                 else
@@ -1687,13 +1815,12 @@ namespace fis
                     }
                     else
                     {
-                        directory = Path.GetDirectoryName(combined);
+                        directory = Path.GetDirectoryName(combined)
+                        ?? currentDir;
+
                         prefix = Path.GetFileName(combined);
                     }
                 }
-
-                if (string.IsNullOrEmpty(directory))
-                    directory = currentDir;
 
                 if (!Directory.Exists(directory))
                     return;
@@ -1701,53 +1828,59 @@ namespace fis
                 try
                 {
                     tabMatches = Directory
-                        .GetFileSystemEntries(directory)
-                        .Where(path =>
-                            Path.GetFileName(path)
-                                .StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                        .OrderBy(path => Path.GetFileName(path))
-                        .ToList();
+                    .GetFileSystemEntries(directory)
+                    .Where(path =>
+                    Path.GetFileName(path).StartsWith(
+                        prefix,
+                        StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(
+                        path => Path.GetFileName(path),
+                             StringComparer.OrdinalIgnoreCase)
+                    .ToList();
                 }
                 catch
                 {
                     tabMatches.Clear();
+                    return;
                 }
             }
 
             if (tabMatches.Count == 0)
                 return;
 
-            // cycle to next match
             tabIndex = (tabIndex + 1) % tabMatches.Count;
 
             string selected = tabMatches[tabIndex];
             string selectedName = Path.GetFileName(selected);
 
-            // keep dir prefix if one was typed
-            string replacement;
+            string typedWithoutQuotes = tabPrefix.Trim('"');
+            string typedDirectory = Path.GetDirectoryName(typedWithoutQuotes)
+            ?? "";
 
-            string typedWithoutQuotes = typed.Trim('"');
+            string replacement = string.IsNullOrEmpty(typedDirectory)
+            ? selectedName
+            : Path.Combine(typedDirectory, selectedName);
 
-            string typedDirectory = Path.GetDirectoryName(typedWithoutQuotes);
-
-            if (!string.IsNullOrEmpty(typedDirectory))
-                replacement = Path.Combine(typedDirectory, selectedName);
-            else
-                replacement = selectedName;
-
-            // add trailing separator when selected item is a directory
             if (Directory.Exists(selected))
                 replacement += Path.DirectorySeparatorChar;
 
-            // preserve quotes if the user started with one
-            if (typed.StartsWith("\""))
-                replacement = "\"" + replacement.TrimEnd(Path.DirectorySeparatorChar) + "\"";
+            if (tabPrefix.StartsWith("\""))
+            {
+                replacement = "\"" +
+                replacement.TrimEnd(Path.DirectorySeparatorChar) +
+                "\"";
+            }
+            else if (replacement.Contains(' '))
+            {
+                replacement = "\"" + replacement + "\"";
+            }
 
-            // replace current argument
             buffer.RemoveRange(argStart, cursor - argStart);
             buffer.InsertRange(argStart, replacement);
 
             cursor = argStart + replacement.Length;
+
+            tabCurrentSelection = replacement;
 
             RedrawLine(buffer, cursor);
         }
@@ -1898,12 +2031,38 @@ namespace fis
             }
 
             // ghost autocomplete
-            if (
-                !nocolormode &&
-                partial &&
-                !exact &&
-                cmd.Length > 0
-            )
+            var fileGhost = GetFileGhost(input);
+
+            if (!nocolormode &&
+                cursor == buffer.Count &&
+                fileGhost.HasValue &&
+                !string.IsNullOrEmpty(fileGhost.Value.Ghost))
+            {
+                var ghost = fileGhost.Value;
+
+                if (ghost.Start == 0)
+                {
+                    Console.SetCursorPosition(0, top);
+
+                    ResCol();
+                    Console.Write(ReturnPrompt());
+
+                    SetColor(ConsoleColor.White);
+                    Console.Write(input);
+
+                    SetColor(ConsoleColor.DarkGray);
+                    Console.Write(ghost.Ghost);
+                }
+                else
+                {
+                    Console.SetCursorPosition(
+                        prompt.Length + input.Length, top);
+
+                    SetColor(ConsoleColor.DarkGray);
+                    Console.Write(ghost.Ghost);
+                }
+            }
+            else if (!nocolormode && partial && !exact && cmd.Length > 0)
             {
                 string match = commands.First(c =>
                 c.StartsWith(cmd, StringComparison.OrdinalIgnoreCase));
@@ -2530,18 +2689,30 @@ namespace fis
                 ? Path.GetFullPath(target)
                 : Path.GetFullPath(Path.Combine(currentDir, target));
 
-            // nuclear rm /rf protection
-            // / is the filesystem root on Unix-like systems.
-            bool isRoot = OperatingSystem.IsLinux() &&
-                        targetPath == Path.DirectorySeparatorChar.ToString();
+            // nuclear rm /rf / (or C:) protection
+            string rootPath = Path.GetPathRoot(targetPath) ?? string.Empty;
 
-            if (isRoot && (recursive || force))
+            bool isFilesystemRoot =
+            !string.IsNullOrWhiteSpace(rootPath) &&
+            string.Equals(
+                targetPath.TrimEnd(
+                    Path.DirectorySeparatorChar,
+                    Path.AltDirectorySeparatorChar),
+                    rootPath.TrimEnd(
+                        Path.DirectorySeparatorChar,
+                        Path.AltDirectorySeparatorChar),
+                        OperatingSystem.IsWindows()
+                        ? StringComparison.OrdinalIgnoreCase
+                        : StringComparison.Ordinal);
+
+            if (isFilesystemRoot)
             {
                 SetColor(ConsoleColor.DarkRed);
                 Console.WriteLine("who are you, actually?");
                 ResForegroundColor();
                 return;
             }
+
 
             // dir
             if (Directory.Exists(targetPath))
@@ -2702,7 +2873,7 @@ namespace fis
             if (normalized.Equals("C:\\Windows\\System32", StringComparison.OrdinalIgnoreCase))
                 return "><[important admin folder]>$ ";
             if (normalized.Equals("/root", StringComparison.OrdinalIgnoreCase))
-                return "><[important root folder]";
+                return "><[important root folder]>$ ";
             if (normalized.Equals($"C:\\Users\\{Environment.UserName}", StringComparison.OrdinalIgnoreCase) || normalized.Equals($"/home/{Environment.UserName}", StringComparison.OrdinalIgnoreCase))
                 return $"><[ur user folder, {Environment.UserName}]>$ ";
             if (normalized.Equals("C:\\Users", StringComparison.OrdinalIgnoreCase) || normalized.Equals("/home", StringComparison.OrdinalIgnoreCase))
@@ -4025,20 +4196,37 @@ namespace fis
                     return;
                 }
 
-                // SHELL MODE
-                if (useSudo)
+
+                int commandStart = 0;
+
+                while (commandStart < rawInput.Length &&
+                    !char.IsWhiteSpace(rawInput[commandStart]))
                 {
-                    SetColor(ConsoleColor.Red);
-                    Console.WriteLine(
-                        "/sudo and /su shell execution aren't implemented yet.");
-                    ResForegroundColor();
-                    return;
+                    commandStart++;
                 }
 
-                // Preserve the original command text, including shell quoting.
-                int commandStart = rawInput.IndexOfAny(new[] { ' ', '\t' });
+                while (commandStart < rawInput.Length &&
+                    char.IsWhiteSpace(rawInput[commandStart]))
+                {
+                    commandStart++;
+                }
 
-                if (commandStart < 0)
+                if (useSudo)
+                {
+                    while (commandStart < rawInput.Length &&
+                        !char.IsWhiteSpace(rawInput[commandStart]))
+                    {
+                        commandStart++;
+                    }
+
+                    while (commandStart < rawInput.Length &&
+                        char.IsWhiteSpace(rawInput[commandStart]))
+                    {
+                        commandStart++;
+                    }
+                }
+
+                if (commandStart >= rawInput.Length)
                 {
                     SetColor(ConsoleColor.Red);
                     Console.WriteLine("where's the command bro");
@@ -4056,7 +4244,51 @@ namespace fis
                     return;
                 }
 
-                RunShellCommand(shellCommand);
+                if (useSudo)
+                {
+                    SetColor(ConsoleColor.Cyan);
+                    Console.WriteLine("sudo/administrator mode has been used, press ctrl+c to fuck the program");
+                    Console.ResetColor();
+                    if (OperatingSystem.IsLinux())
+                    {
+                        var elevatedStart = new ProcessStartInfo
+                        {
+                            FileName = "sudo",
+                            UseShellExecute = false
+                        };
+
+                        elevatedStart.ArgumentList.Add("sh");
+                        elevatedStart.ArgumentList.Add("-c");
+                        elevatedStart.ArgumentList.Add(shellCommand);
+
+                        using Process? elevated = Process.Start(elevatedStart);
+                        elevated?.WaitForExit();
+                    }
+                    else if (OperatingSystem.IsWindows())
+                    {
+                        var elevatedStart = new ProcessStartInfo
+                        {
+                            FileName = Environment.GetEnvironmentVariable("COMSPEC") ?? "cmd.exe",
+                            UseShellExecute = true,
+                            Verb = "runas",
+                            Arguments = "/c " + shellCommand
+                        };
+
+                        using Process? elevated = Process.Start(elevatedStart);
+                        elevated?.WaitForExit();
+                    }
+                    else
+                    {
+                        SetColor(ConsoleColor.Red);
+                        Console.WriteLine("elevated execution isn't supported on this OS.");
+                        ResForegroundColor();
+                    }
+                }
+                else
+                {
+                    RunShellCommand(shellCommand);
+                }
+
                 ResForegroundColor();
             }
             catch (Exception ex)
@@ -4607,8 +4839,6 @@ namespace fis
             Console.ReadKey(true);
             TypeWrite("- NEW IMPORTABLE COMMAND: download");
             Console.ReadKey(true);
-            TypeWrite("- NEW COMMAND: man (seek the \"help\" command to find out how it works)");
-            Console.ReadKey(true);
             TypeWrite("- made rm rejects the infamous -rf / on linux (and C: for windows)");
             Console.ReadKey(true);
             TypeWrite("- obliterated the requirement label off the version shower (the \"ver\" command, yk?)");
@@ -4628,6 +4858,8 @@ namespace fis
             TypeWrite("and yes /sudo (or /su) from \"launch\" command is also present");
             Console.ReadKey(true);
             TypeWrite("- the /hex switch from the \"touch\" command is now obselette\ndue to complicated errors that mr.chatgpt couldn't solve");
+            Console.ReadKey(true);
+            TypeWrite("- highlights filename now");
 
             Console.ReadKey(true);
             TypeWrite("- thats it lmao");

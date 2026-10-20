@@ -4,13 +4,16 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
 
-    <!-- app icon -->
+	<!-- app icon -->
     <ApplicationIcon>fis.ico</ApplicationIcon>
 
-    <!-- THIS is the important part -->
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+	<!-- important -->
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="backup/**/*.cs" />
+  </ItemGroup>
 
 </Project>
