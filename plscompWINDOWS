@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -e
+
+echo building app for windows...
+echo cmake -S . -B build-windows -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++
+
+cmake -S . -B build-windows \
+  -DCMAKE_SYSTEM_NAME=Windows \
+  -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++
+
+echo cmake --build build-windows -j"$(nproc)"
+
+cmake --build build-windows -j"$(nproc)"

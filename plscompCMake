@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+echo building the app for linux using cmake
+echo cmake -S . -B build -DCMAKE_BUILD-TYPE=Release
+
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+echo cmake --build build -j$(nproc)
+
+cmake --build build -j$(nproc)
