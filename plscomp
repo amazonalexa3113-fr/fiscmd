@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+echo building the app for linux using g++ command
+echo g++ -std=c++20 -Wall -Wextra -Wpedantic -Iinclude src/*.cpp -o fiscmd
+
+g++ -std=c++20 -Wall -Wextra -Wpedantic \
+    -Iinclude src/*.cpp -o fiscmd
