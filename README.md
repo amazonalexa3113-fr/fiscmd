@@ -9,16 +9,26 @@ its fun go try it :D
 
 # FAQ
 whats fiscmd
+
 **literally the first (not ever) vibe-coded console app made by chatgpt and gemini that has goofy miscs and dangerous file interaction console that u can use :D**
 requirement??
+
 **some lib + stuff used to run this stupid lil C++**
+
 would it always updates
+
 **not always as im busy updating my heloworlweb**
+
 where had u programmed ts
+
 **vscode with proper extensions installed and the help of linux**
+
 why C++
+
 **if my program is 60MB+, jst switch to C++ since the final program made from modern C++20 version is like a few kilobytes*
+
 what programming language did u use for ts
+
 **C++ (modern C++20 version, used to be coded in C# but i like speed + smol file size)**
 
 more updates in the future bye
@@ -28,6 +38,7 @@ more updates in the future bye
 https://discord.gg/wzCjFwc2PR
 
 also read the **REQUIREMENT.md** file for instructions on how to use and compile this thing
+
 it's open source yk what i mean
 
 # I KNOW WHAT I GOT
